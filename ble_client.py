@@ -154,14 +154,14 @@ class Beetle:
         self.peripheral.writeCharacteristic(self.char_handle, val=nack_packet_to_send)
 
 
-if __name__ == "__main__":
-    first_beetle = Beetle(BEETLE_ADDRESS)
-    first_beetle.setDelegate(BeetleDelegate(first_beetle))
+def beetle_thread(beetle_address):
+    beetle = Beetle(beetle_address)
+    beetle.setDelegate(BeetleDelegate(beetle))
 
     print("Connecting to Beetle...")
     while True:
         try:
-            first_beetle.connect()
+            beetle.connect()
             break
         except BTLEException as e:
             print(e)
@@ -171,8 +171,9 @@ if __name__ == "__main__":
     print(f"Connected successfully to Beetle")
 
     try:
-        first_beetle.run()
+        beetle.run()
     except BTLEException as e:
-        first_beetle.disconnect()
+        print(e)
+        beetle.disconnect()
     finally:
-        first_beetle.reconnect()
+        beetle.reconnect()
