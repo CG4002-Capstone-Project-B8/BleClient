@@ -1,174 +1,26 @@
-from bluepy.btle import DefaultDelegate, Peripheral, BTLEException
-import struct
-from constants import TPacketType, TClientState
-import packetize
+from bluepy.btle import BTLEException
+from beetle import Beetle, BeetleDelegate
+from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor
 
-BEETLE_ADDRESS = "d0:39:72:bf:c3:d1"
-
-
-class BeetleDelegate(DefaultDelegate):
-    def __init__(self, beetle):
-        DefaultDelegate.__init__(self)
-        self.beetle = beetle
-
-    def handleNotification(self, cHandle, data):
-        self.beetle.checkBuffer(data)
-
-
-class Beetle:
-
-    SERIAL_SERVICE_UUID = "0000dfb0-0000-1000-8000-00805f9b34fb"
-    SERIAL_CHAR_UUID = "0000dfb1-0000-1000-8000-00805f9b34fb"
-
-    NOTIFICATIONS_ON = struct.pack('BB', 0x01, 0x00)
-
-    PACKET_LENGTH = 24
-
-    def __init__(self, macAddress):
-        self.mac_address = macAddress
-        self.char_handle = None
-        self.delegate = None
-        self.peripheral = None
-
-        self.ack_seqnum = 0
-        self.player_device_id = None
-
-        self.accel_data = [None] * 3
-        self.gyro_data = [None] * 3
-
-        self.state = TClientState.SEND_HANDSHAKE
-        self.buffer = None
-        self.current_buffer_length = 0
-
-    def setDelegate(self, delegate):
-        self.delegate = delegate
-
-    def waitForNotifications(self):
-        self.peripheral.waitForNotifications(1.0)
-
-    def connect(self):
-        self.peripheral = Peripheral(self.mac_address)
-
-        serial_service = self.peripheral.getServiceByUUID(Beetle.SERIAL_SERVICE_UUID)
-        serial_char = serial_service.getCharacteristics(Beetle.SERIAL_CHAR_UUID)[0]
-        serial_char_handle = serial_char.getHandle()
-        self.char_handle = serial_char_handle
-
-        self.peripheral.writeCharacteristic(serial_char_handle, Beetle.NOTIFICATIONS_ON, True)
-        self.peripheral.setDelegate(self.delegate)
-
-    def disconnect(self):
-        self.peripheral.disconnect()
-
-    def reconnect(self):
-        print("Attempting to reconnect...")
-        while True:
-            try:
-                self.connect()
-                break
-            except BTLEException as btle_ex:
-                print(btle_ex, " (reconnecting)")
-                continue
-
-    def run(self):
-        while self.state == TClientState.SEND_HANDSHAKE:
-            self.initiateHandshake()
-
-        # handshake sent
-        self.state = TClientState.WAIT_FOR_HANDSHAKE_ACK
-        while True:
-            self.waitForNotifications()
-
-    def initiateHandshake(self):
-        packet_type = TPacketType.PACKET_TYPE_HANDSHAKE.value
-        ack_seqnum = self.ack_seqnum
-        player_device_id = self.player_device_id
-
-        handshake_packet_to_send = packetize.serialize(packet_type, ack_seqnum, player_device_id)
-        self.peripheral.writeCharacteristic(self.char_handle, val=handshake_packet_to_send)
-
-    def checkBuffer(self, data):
-        if self.current_buffer_length == 0:
-            self.buffer = data
-            self.current_buffer_length = len(data)
-        else:
-            deficit_length = Beetle.PACKET_LENGTH - self.current_buffer_length
-            self.buffer += data[:deficit_length]
-
-            # data here has length == PACKET_LENGTH, process it
-            self.handleData(self.buffer)
-
-            excess_length = len(data) - deficit_length
-            self.buffer = data[-excess_length:]
-            self.current_buffer_length = len(self.buffer)
-
-    def handleData(self, data):
-        # for debugging
-        print(f'Data received from {self.peripheral.address}:')
-        print(data)
-
-        if packetize.isInvalidPacket(data):
-            self.sendNack()
-            return
-        else:
-            # deserialize data, get a tuple
-            packet_attr = packetize.deserialize(data)
-            packet_type = packet_attr[0]
-
-            self.state = TClientState.SEND_ACK
-            if packet_type == TPacketType.PACKET_TYPE_DATA:
-                self.processData(packet_attr)
-                self.sendAck(isHandshake=False)
-            elif packet_type == TPacketType.PACKET_TYPE_ACK:
-                self.sendAck(isHandshake=True)
-
-    def processData(self, packet_attr):
-        self.ack_seqnum = packet_attr[1]
-        self.player_device_id = packet_attr[2]  # KIV this cause storing player device id can be done somewhere else
-
-        accel_data = list(packet_attr[3:6])
-        self.accel_data = accel_data
-
-        gyro_data = list(packet_attr[6:9])
-        self.gyro_data = gyro_data
-
-    def sendAck(self, isHandshake=False):
-        packet_type = TPacketType.PACKET_TYPE_ACK.value
-        ack_seqnum = self.ack_seqnum
-        player_device_id = self.player_device_id
-
-        ack_packet_to_send = packetize.serialize(packet_type, ack_seqnum, player_device_id)
-        self.peripheral.writeCharacteristic(self.char_handle, val=ack_packet_to_send)
-
-        if isHandshake:
-            self.state = TClientState.WAIT_FOR_HANDSHAKE_ACK
-        else:
-            self.state = TClientState.WAIT_FOR_DATA
-
-    def sendNack(self):
-        packet_type = TPacketType.PACKET_TYPE_NACK.value
-        ack_seqnum = self.ack_seqnum  # seqnum doesn't matter and won't be checked
-        player_device_id = self.player_device_id
-
-        nack_packet_to_send = packetize.serialize(packet_type, ack_seqnum, player_device_id)
-        self.peripheral.writeCharacteristic(self.char_handle, val=nack_packet_to_send)
+# get the MAC addresses here and separate them into player 1 and player 2
+BEETLE_ADDRESSES = [["d0:39:72:bf:c3:d1"], ["d0:39:72:bf:c3:d1"]]
 
 
 def beetle_thread(beetle_address):
     beetle = Beetle(beetle_address)
     beetle.setDelegate(BeetleDelegate(beetle))
 
-    print("Connecting to Beetle...")
+    print(f"Connecting to Beetle - {beetle_address}")
     while True:
         try:
             beetle.connect()
             break
         except BTLEException as e:
             print(e)
-            print("Failed to connect, retrying")
+            print(f"Failed to connect - {beetle_address}, retrying")
             continue
 
-    print(f"Connected successfully to Beetle")
+    print(f"Connected successfully to Beetle - {beetle_address}")
 
     try:
         beetle.run()
@@ -177,3 +29,15 @@ def beetle_thread(beetle_address):
         beetle.disconnect()
     finally:
         beetle.reconnect()
+
+
+def player_process(player_beetle_addresses):
+    with ThreadPoolExecutor(max_workers=len(player_beetle_addresses)) as beetle_thread_executor:
+        beetle_thread_executor.map(beetle_thread, player_beetle_addresses)
+
+
+if __name__ == "__main__":
+    with ProcessPoolExecutor(max_workers=2) as process_executor:
+        process_executor.map(player_process, BEETLE_ADDRESSES)
+
+    # here we start another process which sends the data to the Ultra 96
