@@ -69,12 +69,10 @@ class Beetle:
                 continue
 
     def run(self):
-        while self.state == TClientState.SEND_HANDSHAKE:
-            self.initiateHandshake()
-
-        # handshake sent
-        self.state = TClientState.WAIT_FOR_HANDSHAKE_ACK
         while True:
+            if self.state == TClientState.SEND_HANDSHAKE:
+                self.initiateHandshake()
+
             self.waitForNotifications()
 
     def initiateHandshake(self):
