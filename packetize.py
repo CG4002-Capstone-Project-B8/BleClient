@@ -18,7 +18,7 @@ def serialize(packet_type, ack_seqnum, player_device_id):
     packet = struct.pack(fmt, packet_type, ack_seqnum, player_device_id, bytes(18), bytes(1), bytes(2))
 
     packet_arr = bytearray(packet)
-    packet_arr[CHECKSUM_POS] = get_checksum(packet[:CHECKSUM_POS - 1])
+    packet_arr[CHECKSUM_POS] = get_checksum(packet[:CHECKSUM_POS])
 
     packet = bytes(packet_arr)
     return packet
@@ -35,7 +35,7 @@ def isInvalidPacket(data):
         print("Invalid packet type")
         return True
 
-    expected_checksum = get_checksum(data[:CHECKSUM_POS - 1])
+    expected_checksum = get_checksum(data[:CHECKSUM_POS])
     received_checksum = data[CHECKSUM_POS]
     if received_checksum != expected_checksum:
         print("Invalid checksum")
