@@ -34,7 +34,7 @@ class Beetle:
         self.accel_data = [None] * 3
         self.gyro_data = [None] * 3
 
-        self.state = TClientState.SEND_HANDSHAKE
+        self.state = TClientState.WAIT_FOR_HANDSHAKE_ACK
         self.buffer = None
         self.current_buffer_length = 0
 
@@ -70,7 +70,8 @@ class Beetle:
 
     def run(self):
         while True:
-            if self.state == TClientState.SEND_HANDSHAKE:
+            if self.state == TClientState.WAIT_FOR_HANDSHAKE_ACK:
+                print(f"Starting handshake with Beetle - {self.mac_address}")
                 self.initiateHandshake()
 
             self.waitForNotifications()
@@ -99,6 +100,10 @@ class Beetle:
             self.current_buffer_length = len(self.buffer)
 
     def handleData(self, data):
+        if self.state != TClientState.WAIT_FOR_DATA:
+            print("Not waiting for data in this state")
+            return
+
         # for debugging
         print(f'Data received from {self.peripheral.address}:')
         print(data)
@@ -114,9 +119,9 @@ class Beetle:
             self.state = TClientState.SEND_ACK
             if packet_type == TPacketType.PACKET_TYPE_DATA:
                 self.processData(packet_attr)
-                self.sendAck(isHandshake=False)
+                self.sendAck()
             elif packet_type == TPacketType.PACKET_TYPE_ACK:
-                self.sendAck(isHandshake=True)
+                self.sendAck()
 
     def processData(self, packet_attr):
         self.ack_seqnum = packet_attr[1]
@@ -128,7 +133,13 @@ class Beetle:
         gyro_data = list(packet_attr[6:9])
         self.gyro_data = gyro_data
 
-    def sendAck(self, isHandshake=False):
+        # Sending of data to Ultra96 (enqueueing to Queue) will be done here
+
+    def sendAck(self):
+        if self.state != TClientState.SEND_ACK:
+            print("Unable to send ACK in this state")
+            return
+
         packet_type = TPacketType.PACKET_TYPE_ACK.value
         ack_seqnum = self.ack_seqnum
         player_device_id = self.player_device_id
@@ -136,10 +147,7 @@ class Beetle:
         ack_packet_to_send = packetize.serialize(packet_type, ack_seqnum, player_device_id)
         self.peripheral.writeCharacteristic(self.char_handle, val=ack_packet_to_send)
 
-        if isHandshake:
-            self.state = TClientState.WAIT_FOR_HANDSHAKE_ACK
-        else:
-            self.state = TClientState.WAIT_FOR_DATA
+        self.state = TClientState.WAIT_FOR_DATA
 
     def sendNack(self):
         packet_type = TPacketType.PACKET_TYPE_NACK.value

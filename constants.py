@@ -9,7 +9,6 @@ class TPacketType(Enum):
 
 
 class TClientState(Enum):
-    SEND_HANDSHAKE = 0
-    WAIT_FOR_HANDSHAKE_ACK = 1
-    SEND_ACK = 2
-    WAIT_FOR_DATA = 3
+    WAIT_FOR_HANDSHAKE_ACK = 0
+    SEND_ACK = 1
+    WAIT_FOR_DATA = 2
