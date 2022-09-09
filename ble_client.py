@@ -26,8 +26,8 @@ def beetle_thread(beetle_address):
         beetle.run()
     except BTLEException as e:
         print(e)
-        beetle.disconnect()
     finally:
+        beetle.disconnect()
         beetle.reconnect()
 
 
@@ -37,7 +37,8 @@ def player_process(player_beetle_addresses):
 
 
 if __name__ == "__main__":
-    with ProcessPoolExecutor(max_workers=2) as process_executor:
-        process_executor.map(player_process, BEETLE_ADDRESSES)
+    # with ProcessPoolExecutor(max_workers=2) as process_executor:
+    #     process_executor.map(player_process, BEETLE_ADDRESSES)
+    beetle_thread("d0:39:72:bf:c3:d1")
 
     # here we start another process which sends the data to the Ultra 96

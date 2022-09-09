@@ -10,7 +10,7 @@ class BeetleDelegate(DefaultDelegate):
         self.beetle = beetle
 
     def handleNotification(self, cHandle, data):
-        self.beetle.checkBuffer(data)
+        self.beetle.debugData(data)
 
 
 class Beetle:
@@ -29,13 +29,14 @@ class Beetle:
         self.peripheral = None
 
         self.ack_seqnum = 0
-        self.player_device_id = None
+        self.player_id = None
+        self.device_id = None
 
         self.accel_data = [None] * 3
         self.gyro_data = [None] * 3
 
         self.state = TClientState.WAIT_FOR_HANDSHAKE_ACK
-        self.buffer = None
+        self.buffer = bytes(0)
         self.current_buffer_length = 0
 
     def setDelegate(self, delegate):
@@ -54,6 +55,7 @@ class Beetle:
 
         self.peripheral.writeCharacteristic(serial_char_handle, Beetle.NOTIFICATIONS_ON, True)
         self.peripheral.setDelegate(self.delegate)
+        self.initiateHandshake()
 
     def disconnect(self):
         self.peripheral.disconnect()
@@ -70,25 +72,30 @@ class Beetle:
 
     def run(self):
         while True:
-            if self.state == TClientState.WAIT_FOR_HANDSHAKE_ACK:
-                print(f"Starting handshake with Beetle - {self.mac_address}")
-                self.initiateHandshake()
+            # if self.state == TClientState.WAIT_FOR_HANDSHAKE_ACK:
+            #     print(f"Starting handshake with Beetle - {self.mac_address}")
+            self.initiateHandshake()
 
             self.waitForNotifications()
 
-    def initiateHandshake(self):
-        packet_type = TPacketType.PACKET_TYPE_HANDSHAKE.value
-        ack_seqnum = self.ack_seqnum
-        player_device_id = self.player_device_id
+    def debugData(self, data):
+        self.buffer += data
 
-        handshake_packet_to_send = packetize.serialize(packet_type, ack_seqnum, player_device_id)
+        if len(self.buffer) >= 200:
+            for i in range(10):
+                segment = self.buffer[i*20:(i*20 + 20)]
+                self.handleData(segment)
+            self.buffer = bytes(0)
+
+    def initiateHandshake(self):
+        handshake_packet_to_send = packetize.createPacket(TPacketType.PACKET_TYPE_HANDSHAKE,
+                                                          self.ack_seqnum,
+                                                          self.player_id,
+                                                          self.device_id)
         self.peripheral.writeCharacteristic(self.char_handle, val=handshake_packet_to_send)
 
     def checkBuffer(self, data):
-        if self.current_buffer_length == 0:
-            self.buffer = data
-            self.current_buffer_length = len(data)
-        else:
+        if self.current_buffer_length > 0:
             deficit_length = Beetle.PACKET_LENGTH - self.current_buffer_length
             self.buffer += data[:deficit_length]
 
@@ -98,14 +105,18 @@ class Beetle:
             excess_length = len(data) - deficit_length
             self.buffer = data[-excess_length:]
             self.current_buffer_length = len(self.buffer)
+        else:
+            if len(data) < Beetle.PACKET_LENGTH:
+                self.buffer = data
+                self.current_buffer_length = len(data)
 
     def handleData(self, data):
-        if self.state != TClientState.WAIT_FOR_DATA:
-            print("Not waiting for data in this state")
-            return
+        # if self.state != TClientState.WAIT_FOR_DATA:
+        #     print("Not waiting for data in this state")
+        #     return
 
         # for debugging
-        print(f'Data received from {self.peripheral.address}:')
+        print(f'Data received from {self.mac_address}:')
         print(data)
 
         if packetize.isInvalidPacket(data):
@@ -117,20 +128,22 @@ class Beetle:
             packet_type = packet_attr[0]
 
             self.state = TClientState.SEND_ACK
-            if packet_type == TPacketType.PACKET_TYPE_DATA:
+            if packet_type == TPacketType.PACKET_TYPE_DATA.value:
                 self.processData(packet_attr)
                 self.sendAck()
-            elif packet_type == TPacketType.PACKET_TYPE_ACK:
+            elif packet_type == TPacketType.PACKET_TYPE_ACK.value:
                 self.sendAck()
+                print("Three-way Handshake complete!")
 
     def processData(self, packet_attr):
         self.ack_seqnum = packet_attr[1]
-        self.player_device_id = packet_attr[2]  # KIV this cause storing player device id can be done somewhere else
+        self.player_id = packet_attr[2]  # KIV this cause storing player device id can be done somewhere else
+        self.device_id = packet_attr[3]
 
-        accel_data = list(packet_attr[3:6])
+        accel_data = list(packet_attr[4:7])
         self.accel_data = accel_data
 
-        gyro_data = list(packet_attr[6:9])
+        gyro_data = list(packet_attr[7:10])
         self.gyro_data = gyro_data
 
         # Sending of data to Ultra96 (enqueueing to Queue) will be done here
@@ -140,19 +153,17 @@ class Beetle:
             print("Unable to send ACK in this state")
             return
 
-        packet_type = TPacketType.PACKET_TYPE_ACK.value
-        ack_seqnum = self.ack_seqnum
-        player_device_id = self.player_device_id
-
-        ack_packet_to_send = packetize.serialize(packet_type, ack_seqnum, player_device_id)
+        ack_packet_to_send = packetize.createPacket(TPacketType.PACKET_TYPE_ACK,
+                                                    self.ack_seqnum,
+                                                    self.player_id,
+                                                    self.device_id)
         self.peripheral.writeCharacteristic(self.char_handle, val=ack_packet_to_send)
 
         self.state = TClientState.WAIT_FOR_DATA
 
     def sendNack(self):
-        packet_type = TPacketType.PACKET_TYPE_NACK.value
-        ack_seqnum = self.ack_seqnum  # seqnum doesn't matter and won't be checked
-        player_device_id = self.player_device_id
-
-        nack_packet_to_send = packetize.serialize(packet_type, ack_seqnum, player_device_id)
+        nack_packet_to_send = packetize.createPacket(TPacketType.PACKET_TYPE_NACK,
+                                                     self.ack_seqnum,
+                                                     self.player_id,
+                                                     self.device_id)
         self.peripheral.writeCharacteristic(self.char_handle, val=nack_packet_to_send)
