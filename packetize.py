@@ -78,9 +78,7 @@ def isInvalidPacket(data):
         print("Invalid packet type")
         return True
 
-    expected_checksum = getChecksum(data[:CHECKSUM_POS])
-    received_checksum = data[CHECKSUM_POS]
-    if received_checksum != expected_checksum:
+    if getChecksum(data) != 0:
         print("Invalid checksum")
         return True
 
