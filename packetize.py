@@ -56,12 +56,12 @@ def deserialize(packet):
 
 
 def detailsAsBytes(packet_type, ack_seqnum, player_id, device_id):
-    details = bytes(1)
+    details = 0
     details |= packet_type << PACKET_TYPE_SHIFT
     details |= ack_seqnum << SEQNUM_SHIFT
     details |= player_id << PLAYER_ID_SHIFT
     details |= device_id << DEVICE_ID_SHIFT
-    return details
+    return details.to_bytes(1, 'little')
 
 
 def interpretDetails(details):
