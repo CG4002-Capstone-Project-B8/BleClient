@@ -20,7 +20,7 @@ class Beetle:
 
     NOTIFICATIONS_ON = struct.pack('BB', 0x01, 0x00)
 
-    PACKET_LENGTH = 24
+    PACKET_SIZE = 24
 
     def __init__(self, macAddress):
         self.mac_address = macAddress
@@ -70,12 +70,20 @@ class Beetle:
                 print(btle_ex, " (reconnecting)")
                 continue
 
+    def initiateHandshake(self):
+        print(f"Starting handshake with Beetle - {self.mac_address}")
+
+        handshake_packet_to_send = packetize.createPacket(TPacketType.PACKET_TYPE_HANDSHAKE,
+                                                          self.ack_seqnum,
+                                                          self.player_id,
+                                                          self.device_id)
+        self.peripheral.writeCharacteristic(self.char_handle, val=handshake_packet_to_send)
+
     def run(self):
         while True:
             # if self.state == TClientState.WAIT_FOR_HANDSHAKE_ACK:
             #     print(f"Starting handshake with Beetle - {self.mac_address}")
-            self.initiateHandshake()
-
+            # self.initiateHandshake()
             self.waitForNotifications()
 
     def debugData(self, data):
@@ -87,28 +95,35 @@ class Beetle:
                 self.handleData(segment)
             self.buffer = bytes(0)
 
-    def initiateHandshake(self):
-        handshake_packet_to_send = packetize.createPacket(TPacketType.PACKET_TYPE_HANDSHAKE,
-                                                          self.ack_seqnum,
-                                                          self.player_id,
-                                                          self.device_id)
-        self.peripheral.writeCharacteristic(self.char_handle, val=handshake_packet_to_send)
-
     def checkBuffer(self, data):
-        if self.current_buffer_length > 0:
-            deficit_length = Beetle.PACKET_LENGTH - self.current_buffer_length
-            self.buffer += data[:deficit_length]
+        if self.current_buffer_length == 0:
+            self.buffer = data
+            self.current_buffer_length = len(data)
+        elif self.current_buffer_length > 0:
+            deficit_length = Beetle.PACKET_SIZE - self.current_buffer_length
 
-            # data here has length == PACKET_LENGTH, process it
-            self.handleData(self.buffer)
+            # negative deficit means we have extra bytes in the buffer, we want to immediately
+            # clear out the buffer, reliable protocol (prevent any loss of data)
+            if deficit_length < 0:
+                self.buffer += data
 
-            excess_length = len(data) - deficit_length
-            self.buffer = data[-excess_length:]
-            self.current_buffer_length = len(self.buffer)
-        else:
-            if len(data) < Beetle.PACKET_LENGTH:
-                self.buffer = data
-                self.current_buffer_length = len(data)
+                # clearing out the buffer
+                while deficit_length < 0:
+                    self.handleData(self.buffer[:self.PACKET_SIZE])
+                    self.buffer = self.buffer[self.PACKET_SIZE:]
+                    deficit_length = Beetle.PACKET_SIZE - len(self.buffer)
+
+                self.current_buffer_length = len(self.buffer)
+            else:
+                self.buffer += data[:deficit_length]
+
+                if len(self.buffer) == self.PACKET_SIZE:
+                    # data here has length == PACKET_LENGTH, process it
+                    self.handleData(self.buffer)
+
+                excess_length = len(data) - deficit_length
+                self.buffer = data[-excess_length:]
+                self.current_buffer_length = len(self.buffer)
 
     def handleData(self, data):
         # if self.state != TClientState.WAIT_FOR_DATA:
@@ -125,6 +140,7 @@ class Beetle:
         else:
             # deserialize data, get a tuple
             packet_attr = packetize.deserialize(data)
+            print(f'Packet attributes: {packet_attr}')
             packet_type = packet_attr[0]
 
             self.state = TClientState.SEND_ACK
@@ -137,7 +153,7 @@ class Beetle:
 
     def processData(self, packet_attr):
         self.ack_seqnum = packet_attr[1]
-        self.player_id = packet_attr[2]  # KIV this cause storing player device id can be done somewhere else
+        self.player_id = packet_attr[2]  # KIV this - storing player/device id can be done w.r.t. to MAC address
         self.device_id = packet_attr[3]
 
         accel_data = list(packet_attr[4:7])
