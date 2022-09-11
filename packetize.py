@@ -33,6 +33,9 @@ def serialize(details):
     fmt = 'c18sc'
     packet = struct.pack(fmt, details, bytes(18), bytes(1))
 
+    # debugging purposes only
+    print("Sending: ", interpretDetails(details[0]))
+
     packet_arr = bytearray(packet)
     packet_arr[CHECKSUM_POS] = getChecksum(packet[:CHECKSUM_POS])
 
