@@ -10,7 +10,7 @@ class BeetleDelegate(DefaultDelegate):
         self.beetle = beetle
 
     def handleNotification(self, cHandle, data):
-        self.beetle.debugData(data)
+        self.beetle.checkBuffer(data)
 
 
 class Beetle:
@@ -20,17 +20,17 @@ class Beetle:
 
     NOTIFICATIONS_ON = struct.pack('BB', 0x01, 0x00)
 
-    PACKET_SIZE = 24
+    PACKET_SIZE = 20
 
-    def __init__(self, macAddress):
+    def __init__(self, macAddress, player_id, device_id):
         self.mac_address = macAddress
         self.char_handle = None
         self.delegate = None
         self.peripheral = None
 
         self.ack_seqnum = 0
-        self.player_id = None
-        self.device_id = None
+        self.player_id = player_id
+        self.device_id = device_id
 
         self.accel_data = [None] * 3
         self.gyro_data = [None] * 3
@@ -99,31 +99,30 @@ class Beetle:
         if self.current_buffer_length == 0:
             self.buffer = data
             self.current_buffer_length = len(data)
-        elif self.current_buffer_length > 0:
-            deficit_length = Beetle.PACKET_SIZE - self.current_buffer_length
 
-            # negative deficit means we have extra bytes in the buffer, we want to immediately
-            # clear out the buffer, reliable protocol (prevent any loss of data)
-            if deficit_length < 0:
-                self.buffer += data
+        deficit_length = Beetle.PACKET_SIZE - self.current_buffer_length
 
-                # clearing out the buffer
-                while deficit_length < 0:
-                    self.handleData(self.buffer[:self.PACKET_SIZE])
-                    self.buffer = self.buffer[self.PACKET_SIZE:]
-                    deficit_length = Beetle.PACKET_SIZE - len(self.buffer)
+        # negative deficit means we have extra bytes in the buffer, we want to immediately
+        # clear out the buffer, reliable protocol (prevent any loss of data)
+        while deficit_length < 0:
+            self.handleData(self.buffer[:self.PACKET_SIZE])
+            self.buffer = self.buffer[self.PACKET_SIZE:]
+            deficit_length = Beetle.PACKET_SIZE - len(self.buffer)
 
-                self.current_buffer_length = len(self.buffer)
-            else:
-                self.buffer += data[:deficit_length]
+        self.buffer += data[:deficit_length]
 
-                if len(self.buffer) == self.PACKET_SIZE:
-                    # data here has length == PACKET_LENGTH, process it
-                    self.handleData(self.buffer)
+        if len(self.buffer) == self.PACKET_SIZE:
+            # data here has length == PACKET_SIZE, handle it
+            self.handleData(self.buffer)
 
-                excess_length = len(data) - deficit_length
-                self.buffer = data[-excess_length:]
-                self.current_buffer_length = len(self.buffer)
+            # clear out the buffer
+            self.buffer = self.buffer[self.PACKET_SIZE:]
+            self.current_buffer_length = len(self.buffer)
+
+        # there is excess data received which has not been processed, store it in the buffer
+        if deficit_length > 0:
+            self.buffer = data[deficit_length:]
+            self.current_buffer_length = len(self.buffer)
 
     def handleData(self, data):
         # if self.state != TClientState.WAIT_FOR_DATA:
@@ -131,7 +130,7 @@ class Beetle:
         #     return
 
         # for debugging
-        print(f'Data received from {self.mac_address}:')
+        print(f'Packet received from {self.mac_address}:')
         print(data)
 
         if packetize.isInvalidPacket(data):
@@ -153,8 +152,6 @@ class Beetle:
 
     def processData(self, packet_attr):
         self.ack_seqnum = packet_attr[1]
-        self.player_id = packet_attr[2]  # KIV this - storing player/device id can be done w.r.t. to MAC address
-        self.device_id = packet_attr[3]
 
         accel_data = list(packet_attr[4:7])
         self.accel_data = accel_data
