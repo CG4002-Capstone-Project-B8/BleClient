@@ -7,6 +7,12 @@ from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor
 BEETLE_ADDRESSES = [["d0:39:72:bf:c3:d1", "d0:39:72:bf:cd:1e", "c4:be:84:20:1a:0c"],
                     ["d0:39:72:bf:c3:d1"]]
 
+PLAYER_ONE = 0
+PLAYER_TWO = 1
+
+PLAYER_ONE_BEETLES = BEETLE_ADDRESSES[0]
+PLAYER_TWO_BEETLES = BEETLE_ADDRESSES[1]
+
 
 def beetle_thread(beetle_address, player_id, device_id):
     beetle = Beetle(beetle_address, player_id, device_id)
@@ -22,8 +28,6 @@ def beetle_thread(beetle_address, player_id, device_id):
             print(f"Failed to connect - {beetle_address}, retrying")
             continue
 
-    print(f"Connected successfully to Beetle - {beetle_address}")
-
     while True:
         try:
             beetle.run()
@@ -34,9 +38,11 @@ def beetle_thread(beetle_address, player_id, device_id):
             beetle.reconnect()
 
 
-def player_process(player_beetle_addresses):
+def player_process(player_id, player_beetle_addresses):
     with ThreadPoolExecutor(max_workers=len(player_beetle_addresses)) as beetle_thread_executor:
-        beetle_thread_executor.map(beetle_thread, player_beetle_addresses)
+        for i, beetle_address in enumerate(player_beetle_addresses):
+            device_id = i + 1
+            beetle_thread_executor.submit(beetle_thread, beetle_address, player_id, device_id)
 
 
 if __name__ == "__main__":
@@ -44,5 +50,7 @@ if __name__ == "__main__":
     #     process_executor.map(player_process, BEETLE_ADDRESSES)
     # beetle_thread("d0:39:72:bf:c3:d1", 0, 1)
     # beetle_thread("d0:39:72:bf:cd:1e", 0, 2)
-    beetle_thread("c4:be:84:20:1a:0c", 0, 3)
+    # beetle_thread("c4:be:84:20:1a:0c", 0, 3)
+    player_process(PLAYER_ONE, PLAYER_ONE_BEETLES)
+
     # here we start another process which sends the data to the Ultra 96
