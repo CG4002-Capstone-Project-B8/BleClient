@@ -1,5 +1,6 @@
 from bluepy.btle import DefaultDelegate, Peripheral, BTLEException
 import struct
+import time
 from constants import TPacketType, TClientState
 import packetize
 
@@ -22,22 +23,33 @@ class Beetle:
 
     PACKET_SIZE = 20
 
+    # timeout value of 2 seconds
+    TIMEOUT = 2
+
     def __init__(self, macAddress, player_id, device_id):
+        # attributes to identify each beetle uniquely
         self.mac_address = macAddress
+        self.player_id = player_id
+        self.device_id = device_id
+
+        # attributes needed for Beetle connection
         self.char_handle = None
         self.delegate = None
         self.peripheral = None
 
         self.ack_seqnum = 0
-        self.player_id = player_id
-        self.device_id = device_id
 
+        # sensor data collected on each Beetle
         self.accel_data = [None] * 3
         self.gyro_data = [None] * 3
 
+        # attributes for state management and fragmentation
         self.state = TClientState.WAIT_FOR_HANDSHAKE_ACK
         self.buffer = bytes(0)
         self.current_buffer_length = 0
+
+        # attribute for timeout
+        self.send_time = time.perf_counter()
 
     def setDelegate(self, delegate):
         self.delegate = delegate
@@ -46,15 +58,21 @@ class Beetle:
         self.peripheral.waitForNotifications(1.0)
 
     def connect(self):
+        # initiate a connection to Beetle
         self.peripheral = Peripheral(self.mac_address)
+        print(f"Connected successfully to Beetle - {self.mac_address}")
 
+        # obtain GATT service and characteristic handle for Serial characteristic
         serial_service = self.peripheral.getServiceByUUID(Beetle.SERIAL_SERVICE_UUID)
         serial_char = serial_service.getCharacteristics(Beetle.SERIAL_CHAR_UUID)[0]
         serial_char_handle = serial_char.getHandle()
         self.char_handle = serial_char_handle
 
+        # enable notifications for Serial characteristic
         self.peripheral.writeCharacteristic(serial_char_handle, Beetle.NOTIFICATIONS_ON, True)
         self.peripheral.setDelegate(self.delegate)
+
+        # start Three-way handshake
         self.initiateHandshake()
 
     def resetAttributes(self):
@@ -69,8 +87,8 @@ class Beetle:
             try:
                 self.connect()
                 break
-            except BTLEException as btle_ex:
-                print(btle_ex, " (reconnecting)")
+            except BTLEException as e:
+                print(e, " (reconnecting)")
                 continue
 
     def initiateHandshake(self):
@@ -82,8 +100,14 @@ class Beetle:
                                                           self.device_id)
         self.peripheral.writeCharacteristic(self.char_handle, val=handshake_packet_to_send)
 
+        self.send_time = time.perf_counter()
+
     def run(self):
         while True:
+            if time.perf_counter() - self.send_time > Beetle.TIMEOUT:
+                print(f"Timeout, re-initiating handshake with Beetle - {self.mac_address}")
+                self.initiateHandshake()
+
             self.waitForNotifications()
 
     def debugData(self, data):
@@ -96,10 +120,13 @@ class Beetle:
             self.buffer = bytes(0)
 
     def checkBuffer(self, data):
+        # buffer might be empty after the fragmentation has been handled
+        # so it is filled with the current data
         if self.current_buffer_length == 0:
             self.buffer = data
             self.current_buffer_length = len(data)
 
+        # check if current buffer has a lack of bytes, meaning a packet has been fragmented
         deficit_length = Beetle.PACKET_SIZE - self.current_buffer_length
 
         # negative deficit means we have extra bytes in the buffer, we want to immediately
@@ -109,6 +136,7 @@ class Beetle:
             self.buffer = self.buffer[self.PACKET_SIZE:]
             deficit_length = Beetle.PACKET_SIZE - len(self.buffer)
 
+        # add the first deficit_length bytes from data to the buffer
         self.buffer += data[:deficit_length]
 
         if len(self.buffer) == self.PACKET_SIZE:
@@ -133,7 +161,7 @@ class Beetle:
             self.sendNack()
             return
         else:
-            # deserialize data, get a tuple
+            # deserialize data, get a tuple named packet_attr
             packet_attr = packetize.deserialize(data)
             print(f'Packet attributes: {packet_attr}')
             packet_type = packet_attr[0]
@@ -144,11 +172,12 @@ class Beetle:
                 self.sendAck()
             elif packet_type == TPacketType.PACKET_TYPE_ACK.value:
                 self.sendAck()
-                print("Three-way Handshake complete!")
+                print("Three-way Handshake complete! Ready to receive data")
 
     def processData(self, packet_attr):
         self.ack_seqnum = packet_attr[1]
 
+        # store these values which will be sent to the Ultra96
         accel_data = list(packet_attr[4:7])
         self.accel_data = accel_data
 
@@ -168,6 +197,7 @@ class Beetle:
                                                     self.device_id)
         self.peripheral.writeCharacteristic(self.char_handle, val=ack_packet_to_send)
 
+        self.send_time = time.perf_counter()
         self.state = TClientState.WAIT_FOR_DATA
 
     def sendNack(self):
@@ -176,3 +206,5 @@ class Beetle:
                                                      self.player_id,
                                                      self.device_id)
         self.peripheral.writeCharacteristic(self.char_handle, val=nack_packet_to_send)
+
+        self.send_time = time.perf_counter()
