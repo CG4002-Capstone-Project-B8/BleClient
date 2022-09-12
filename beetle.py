@@ -57,6 +57,9 @@ class Beetle:
         self.peripheral.setDelegate(self.delegate)
         self.initiateHandshake()
 
+    def resetAttributes(self):
+        self.ack_seqnum = 0
+
     def disconnect(self):
         self.peripheral.disconnect()
 
@@ -81,9 +84,6 @@ class Beetle:
 
     def run(self):
         while True:
-            # if self.state == TClientState.WAIT_FOR_HANDSHAKE_ACK:
-            #     print(f"Starting handshake with Beetle - {self.mac_address}")
-            # self.initiateHandshake()
             self.waitForNotifications()
 
     def debugData(self, data):
@@ -125,10 +125,6 @@ class Beetle:
             self.current_buffer_length = len(self.buffer)
 
     def handleData(self, data):
-        # if self.state != TClientState.WAIT_FOR_DATA:
-        #     print("Not waiting for data in this state")
-        #     return
-
         # for debugging
         print(f'Packet received from {self.mac_address}:')
         print(data)
@@ -142,7 +138,7 @@ class Beetle:
             print(f'Packet attributes: {packet_attr}')
             packet_type = packet_attr[0]
 
-            self.state = TClientState.SEND_ACK
+            self.state = TClientState.SEND_ACK 
             if packet_type == TPacketType.PACKET_TYPE_DATA.value:
                 self.processData(packet_attr)
                 self.sendAck()

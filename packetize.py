@@ -89,5 +89,5 @@ def isInvalidPacket(data):
 
 
 def isInvalidPacketType(packet_type):
-    valid_types = [t.value for t in TPacketType]
+    valid_types = [TPacketType.PACKET_TYPE_ACK.value, TPacketType.PACKET_TYPE_DATA.value]
     return packet_type not in valid_types
