@@ -51,11 +51,16 @@ class Beetle:
         # attribute for timeout
         self.send_time = time.perf_counter()
 
+        # for measuring throughput
+        self.start_time = None
+        self.end_time = None
+        self.num_packets_received = 0
+
     def setDelegate(self, delegate):
         self.delegate = delegate
 
     def waitForNotifications(self):
-        self.peripheral.waitForNotifications(1.0)
+        self.peripheral.waitForNotifications(0.5)
 
     def connect(self):
         # initiate a connection to Beetle
@@ -88,7 +93,7 @@ class Beetle:
                 self.connect()
                 break
             except BTLEException as e:
-                print(e, " (reconnecting)")
+                print(e, " (Reconnecting...)")
                 continue
 
     def initiateHandshake(self):
@@ -168,6 +173,9 @@ class Beetle:
 
             self.state = TClientState.SEND_ACK 
             if packet_type == TPacketType.PACKET_TYPE_DATA.value:
+                if not self.start_time:
+                    self.start_time = time.perf_counter()
+
                 self.processData(packet_attr)
                 self.sendAck()
             elif packet_type == TPacketType.PACKET_TYPE_ACK.value:
@@ -175,6 +183,10 @@ class Beetle:
                 print("Three-way Handshake complete! Ready to receive data")
 
     def processData(self, packet_attr):
+        # for throughput calculation
+        self.num_packets_received += 1
+        self.showThroughput()
+
         self.ack_seqnum = packet_attr[1]
 
         # store these values which will be sent to the Ultra96
@@ -208,3 +220,10 @@ class Beetle:
         self.peripheral.writeCharacteristic(self.char_handle, val=nack_packet_to_send)
 
         self.send_time = time.perf_counter()
+
+    def showThroughput(self):
+        self.end_time = time.perf_counter()
+        total_time = self.end_time - self.start_time
+        throughput = (self.num_packets_received * Beetle.PACKET_SIZE * 8) / (1000 * total_time)
+        print(f"Time elapsed:", "{:.2f},".format(total_time), f"Received {self.num_packets_received} packets - {self.mac_address}")
+        print(f"Throughput of Beetle - {self.mac_address} =", "{:.3f}".format(throughput), "kbps")

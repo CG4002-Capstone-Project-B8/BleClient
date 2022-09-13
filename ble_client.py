@@ -4,7 +4,7 @@ from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor
 
 # get the MAC addresses here and separate them into player 1 and player 2
 # in the order: Player1 -> Player 2, IMU -> Emitter -> Receiver
-BEETLE_ADDRESSES = [["d0:39:72:bf:c3:d1", "d0:39:72:bf:cd:1e", "c4:be:84:20:1a:0c"],
+BEETLE_ADDRESSES = [["d0:39:72:bf:c3:d1", "d0:39:72:bf:cd:1e", "d0:39:72:bf:c3:90"],
                     ["d0:39:72:bf:c3:d1"]]
 
 PLAYER_ONE = 0
@@ -36,6 +36,10 @@ def beetle_thread(beetle_address, player_id, device_id):
             beetle.resetAttributes()
             beetle.disconnect()
             beetle.reconnect()
+        except KeyboardInterrupt as kb:
+            print(f"Exiting - {beetle_address}")
+            # beetle.showThroughput()
+            exit()
 
 
 def player_process(player_id, player_beetle_addresses):
@@ -50,7 +54,7 @@ if __name__ == "__main__":
     #     process_executor.map(player_process, BEETLE_ADDRESSES)
     # beetle_thread("d0:39:72:bf:c3:d1", 0, 1)
     # beetle_thread("d0:39:72:bf:cd:1e", 0, 2)
-    # beetle_thread("c4:be:84:20:1a:0c", 0, 3)
+    # beetle_thread("d0:39:72:bf:c3:90", 0, 3)
     player_process(PLAYER_ONE, PLAYER_ONE_BEETLES)
 
     # here we start another process which sends the data to the Ultra 96
