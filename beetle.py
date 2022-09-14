@@ -83,6 +83,10 @@ class Beetle:
     def resetAttributes(self):
         self.ack_seqnum = 0
 
+        self.num_packets_received = 0
+        self.start_time = None
+        self.end_time = None
+
     def disconnect(self):
         self.peripheral.disconnect()
 
