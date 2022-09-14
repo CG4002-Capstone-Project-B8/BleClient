@@ -39,6 +39,7 @@ def beetle_thread(beetle_address, player_id, device_id):
         except KeyboardInterrupt as kb:
             print(f"Exiting - {beetle_address}")
             # beetle.showThroughput()
+            beetle.disconnect()
             exit()
 
 
