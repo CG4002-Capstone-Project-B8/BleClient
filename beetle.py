@@ -26,7 +26,7 @@ class Beetle:
     # timeout value of 2 seconds
     TIMEOUT = 2
 
-    def __init__(self, macAddress, player_id, device_id):
+    def __init__(self, macAddress, player_id, device_id, player_queue):
         # attributes to identify each beetle uniquely
         self.mac_address = macAddress
         self.player_id = player_id
@@ -39,12 +39,7 @@ class Beetle:
 
         self.ack_seqnum = 0
 
-        # sensor data collected on each Beetle
-        self.accel_data = [None] * 3
-        self.gyro_data = [None] * 3
-
         # attributes for state management and fragmentation
-        self.state = TClientState.WAIT_FOR_HANDSHAKE_ACK
         self.buffer = bytes(0)
         self.current_buffer_length = 0
 
@@ -55,12 +50,22 @@ class Beetle:
         self.start_time = None
         self.end_time = None
         self.num_packets_received = 0
+        # self.num_packets_dropped = 0
+        # self.num_packets_fragmented = 0
+
+        # for communication with Ultra 96
+        self.queue = player_queue
+        self.can_enqueue_data = False
+        self.packet_attr = None
 
     def setDelegate(self, delegate):
         self.delegate = delegate
 
     def waitForNotifications(self):
-        self.peripheral.waitForNotifications(0.5)
+        self.peripheral.waitForNotifications(1.0)
+
+    def setCanEnqueue(self, can_enqueue):
+        self.can_enqueue_data = can_enqueue
 
     def connect(self):
         # initiate a connection to Beetle
@@ -84,8 +89,8 @@ class Beetle:
         self.ack_seqnum = 0
 
         self.num_packets_received = 0
-        self.start_time = None
-        self.end_time = None
+        self.start_time = 0
+        self.end_time = 0
 
     def disconnect(self):
         self.peripheral.disconnect()
@@ -138,6 +143,9 @@ class Beetle:
         # check if current buffer has a lack of bytes, meaning a packet has been fragmented
         deficit_length = Beetle.PACKET_SIZE - self.current_buffer_length
 
+        # if deficit_length != 0:
+        #     self.num_packets_fragmented += 1
+
         # negative deficit means we have extra bytes in the buffer, we want to immediately
         # clear out the buffer, reliable protocol (prevent any loss of data)
         while deficit_length < 0:
@@ -167,15 +175,15 @@ class Beetle:
         print(data)
 
         if packetize.isInvalidPacket(data):
+            # self.num_packets_dropped += 1
             self.sendNack()
             return
         else:
             # deserialize data, get a tuple named packet_attr
             packet_attr = packetize.deserialize(data)
-            print(f'Packet attributes: {packet_attr}')
+            # print(f'Packet attributes: {packet_attr}')
             packet_type = packet_attr[0]
 
-            self.state = TClientState.SEND_ACK 
             if packet_type == TPacketType.PACKET_TYPE_DATA.value:
                 if not self.start_time:
                     self.start_time = time.perf_counter()
@@ -184,7 +192,7 @@ class Beetle:
                 self.sendAck()
             elif packet_type == TPacketType.PACKET_TYPE_ACK.value:
                 self.sendAck()
-                print("Three-way Handshake complete! Ready to receive data")
+                print(f"Three-way Handshake complete! Ready to receive data - {self.mac_address}")
 
     def processData(self, packet_attr):
         # for throughput calculation
@@ -192,21 +200,13 @@ class Beetle:
         self.showThroughput()
 
         self.ack_seqnum = packet_attr[1]
-
-        # store these values which will be sent to the Ultra96
-        accel_data = list(packet_attr[4:7])
-        self.accel_data = accel_data
-
-        gyro_data = list(packet_attr[7:10])
-        self.gyro_data = gyro_data
+        self.packet_attr = packet_attr
 
         # Sending of data to Ultra96 (enqueueing to Queue) will be done here
+        if self.can_enqueue_data:
+            self.queue.put_nowait(self.packet_attr)
 
     def sendAck(self):
-        if self.state != TClientState.SEND_ACK:
-            print("Unable to send ACK in this state")
-            return
-
         ack_packet_to_send = packetize.createPacket(TPacketType.PACKET_TYPE_ACK,
                                                     self.ack_seqnum,
                                                     self.player_id,
@@ -214,7 +214,6 @@ class Beetle:
         self.peripheral.writeCharacteristic(self.char_handle, val=ack_packet_to_send)
 
         self.send_time = time.perf_counter()
-        self.state = TClientState.WAIT_FOR_DATA
 
     def sendNack(self):
         nack_packet_to_send = packetize.createPacket(TPacketType.PACKET_TYPE_NACK,
@@ -229,5 +228,8 @@ class Beetle:
         self.end_time = time.perf_counter()
         total_time = self.end_time - self.start_time
         throughput = (self.num_packets_received * Beetle.PACKET_SIZE * 8) / (1000 * total_time)
-        print(f"Time elapsed:", "{:.2f},".format(total_time), f"Received {self.num_packets_received} packets - {self.mac_address}")
+        print(f"Time elapsed:", "{:.2f},".format(total_time))
+        print(f"Received {self.num_packets_received} packets - {self.mac_address}")
+        # print(f"Dropped {self.num_packets_dropped} packets - {self.mac_address}")
+        # print(f"{self.num_packets_fragmented} packets fragmented - {self.mac_address}")
         print(f"Throughput of Beetle - {self.mac_address} =", "{:.3f}".format(throughput), "kbps")
