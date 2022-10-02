@@ -8,11 +8,15 @@ PACKET_TYPE_SHIFT = 6
 SEQNUM_SHIFT = 5
 PLAYER_ID_SHIFT = 4
 DEVICE_ID_SHIFT = 2
+SEND_SHOT_SHIFT = 1
+RECEIVE_SHOT_SHIFT = 0
 
 PACKET_TYPE_MASK = (3 << PACKET_TYPE_SHIFT)
 SEQNUM_MASK = (1 << SEQNUM_SHIFT)
 PLAYER_ID_MASK = (1 << PLAYER_ID_SHIFT)
 DEVICE_ID_MASK = (3 << DEVICE_ID_SHIFT)
+SEND_SHOT_MASK = (0x01 << SEND_SHOT_SHIFT)
+RECEIVE_SHOT_MASK = (0x01 << RECEIVE_SHOT_SHIFT)
 
 
 def getChecksum(byte_seq):
@@ -72,7 +76,12 @@ def interpretDetails(details):
     seqnum = (details & SEQNUM_MASK) >> SEQNUM_SHIFT
     player_id = (details & PLAYER_ID_MASK) >> PLAYER_ID_SHIFT
     device_id = (details & DEVICE_ID_MASK) >> DEVICE_ID_SHIFT
-    return packet_type, seqnum, player_id, device_id
+
+    # new bits introduced for status of player
+    sent_shot = (details & SEND_SHOT_MASK) >> SEND_SHOT_SHIFT
+    received_shot = (details & RECEIVE_SHOT_MASK) >> RECEIVE_SHOT_SHIFT
+
+    return packet_type, seqnum, player_id, device_id, sent_shot, received_shot
 
 
 def isInvalidPacket(data):
