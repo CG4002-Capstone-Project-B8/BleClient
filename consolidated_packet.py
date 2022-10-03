@@ -17,6 +17,9 @@ class ConsolidatedPacket:
         self.gyro_data = [None] * 3
         self.accel_data = [None] * 3
 
+    # packet attr is in the form
+    # (packet_type, seqnum, player_id, device_id, sent_shot, received_shot, gyro_data[0], gyro_data[1], gyro_data[2],
+    #  accel_data[0], accel_data[1], accel_data[2], checksum)
     def extractBlePacketData(self, packet_attr):
         player_id = packet_attr[2]
         self.details |= player_id << ConsolidatedPacket.PLAYER_ID_SHIFT
@@ -29,11 +32,9 @@ class ConsolidatedPacket:
             self.processGyroData()  # perform further division of gyro data as required
 
             self.accel_data = packet_attr[9:12]
-        # data from emitter
-        elif device_id == EMITTER:
+        elif device_id == EMITTER:  # data from emitter
             self.details |= packet_attr[4] << ConsolidatedPacket.SEND_SHOT_SHIFT
-        # data from receiver
-        elif device_id == RECEIVER:
+        elif device_id == RECEIVER:  # data from receiver
             self.details |= packet_attr[5] << ConsolidatedPacket.RECEIVE_SHOT_SHIFT
 
     def processGyroData(self):

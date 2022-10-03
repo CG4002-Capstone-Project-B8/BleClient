@@ -63,5 +63,3 @@ class Client:
                 ble_packet_attr = self.p1_queue.get_nowait()
                 cp2.extractBlePacketData(ble_packet_attr)
             sock.sendall(cp2.toBytes())
-
-
