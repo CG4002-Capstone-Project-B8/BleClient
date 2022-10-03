@@ -42,7 +42,7 @@ class ConsolidatedPacket:
         self.gyro_data = tuple(self.gyro_data)
 
     def toBytes(self):
-        fmt = 'c6f'
+        fmt = '!c6f'
         self.details = self.details.to_bytes(1, 'little')
         packet_bytes = struct.pack(fmt, self.details, *self.gyro_data, *self.accel_data)
         return packet_bytes
