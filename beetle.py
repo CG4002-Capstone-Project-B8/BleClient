@@ -202,9 +202,19 @@ class Beetle:
         self.ack_seqnum = packet_attr[1]
         self.packet_attr = packet_attr
 
-        # Sending of data to Ultra96 (enqueueing to Queue) will be done here
-        if self.can_enqueue_data:
-            self.queue.put_nowait(self.packet_attr)
+        # Don't enqueue unless all beetles are connected
+        if not self.can_enqueue_data:
+            return
+
+        # Don't enqueue if no shot was sent
+        if self.device_id == 2 and not self.packet_attr[4]:
+            return
+
+        # Don't enqueue if no shot was received
+        if self.device_id == 3 and not self.packet_attr[5]:
+            return
+
+        self.queue.put_nowait(self.packet_attr)
 
     def sendAck(self):
         ack_packet_to_send = packetize.createPacket(TPacketType.PACKET_TYPE_ACK,
