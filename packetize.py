@@ -79,7 +79,12 @@ def interpretDetails(details):
 
     # new bits introduced for status of player
     sent_shot = (details & SEND_SHOT_MASK) >> SEND_SHOT_SHIFT
+    if sent_shot:
+        print("SENT SHOT!\n\n")
+
     received_shot = (details & RECEIVE_SHOT_MASK) >> RECEIVE_SHOT_SHIFT
+    if received_shot:
+        print("RECEIVED SHOT!\n\n")
 
     return packet_type, seqnum, player_id, device_id, sent_shot, received_shot
 
