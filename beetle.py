@@ -181,7 +181,7 @@ class Beetle:
         else:
             # deserialize data, get a tuple named packet_attr
             packet_attr = packetize.deserialize(data)
-            # print(f'Packet attributes: {packet_attr}')
+            print(f'Packet attributes: {packet_attr}')
             packet_type = packet_attr[0]
 
             if packet_type == TPacketType.PACKET_TYPE_DATA.value:
@@ -228,6 +228,7 @@ class Beetle:
         self.end_time = time.perf_counter()
         total_time = self.end_time - self.start_time
         throughput = (self.num_packets_received * Beetle.PACKET_SIZE * 8) / (1000 * total_time)
+
         print(f"Time elapsed:", "{:.2f},".format(total_time))
         print(f"Received {self.num_packets_received} packets - {self.mac_address}")
         # print(f"Dropped {self.num_packets_dropped} packets - {self.mac_address}")
