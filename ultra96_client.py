@@ -2,6 +2,7 @@ from dotenv import load_dotenv
 import sshtunnel
 import os
 import socket
+import logging
 from relay_packet import RelayPacket
 
 NUM_BEETLES_PER_PLAYER = 3
@@ -31,10 +32,15 @@ class Ultra96Client:
         self.p1_queue = player_one_queue
         self.p2_queue = player_two_queue
 
-    def run(self):
-        self.tunnel_to_ultra96()
+        # configure log files
+        # logging.basicConfig(filename="ultra96_logs.txt", level=logging.INFO, filemode="w", format="%(message)s")
 
-    def tunnel_to_ultra96(self):
+    def run(self):
+        self.tunnelToUltra96()
+        # while True:
+            # self.sendPackets()
+
+    def tunnelToUltra96(self):
         with sshtunnel.open_tunnel(
                 (Ultra96Client.TUNNEL_DOMAIN_NAME, Ultra96Client.TUNNEL_PORT_NUM),
                 ssh_username=self.sunfire_username,
@@ -50,17 +56,31 @@ class Ultra96Client:
                     self.sendPackets(s)
 
     def sendPackets(self, sock):
+        # print('ULTRA96_CLIENT: Running, watching player queues')
         if not self.p1_queue.empty():
+            print('ULTRA96_CLIENT: Player1 queue has data')
             packet_to_send = RelayPacket()
-            ble_packet_attr = self.p1_queue.get_nowait()
+            ble_packet_attr = self.p1_queue.get()
             packet_to_send.extractBlePacketData(ble_packet_attr)
-            # sock.sendall(packet_to_send.toBytes())
-            print(f'Sending to Ultra96: {packet_to_send.toBytes()}')
+
+            packet_bytes = packet_to_send.toBytes()
+            packet_tuple = packet_to_send.toTuple()
+            sock.sendall(packet_bytes)
+            # logging.info(f'Packet sent to Ultra96: {packet_to_send.toTuple()}')
+            # logging.info(f'Bytes sent to Ultra96 : {packet_to_send.toBytes()}\n')
+            print(f'ULTRA96_CLIENT: Packet sent to Ultra96: {packet_tuple}')
+            print(f'ULTRA96_CLIENT: Bytes sent to Ultra96 : {packet_bytes}\n')
 
         if not self.p2_queue.empty():
             packet_to_send = RelayPacket()
-            ble_packet_attr = self.p2_queue.get_nowait()
+            ble_packet_attr = self.p2_queue.get()
             packet_to_send.extractBlePacketData(ble_packet_attr)
-            # sock.sendall(packet_to_send.toBytes())
-            print(f'Sending to Ultra96: {packet_to_send.toBytes()}')
+
+            packet_bytes = packet_to_send.toBytes()
+            packet_tuple = packet_to_send.toTuple()
+            sock.sendall(packet_bytes)
+            # logging.info(f'Packet sent to Ultra96: {packet_to_send.toTuple()}')
+            # logging.info(f'Bytes sent to Ultra96 : {packet_to_send.toBytes()}\n')
+            print(f'Packet sent to Ultra96: {packet_tuple}')
+            print(f'Bytes sent to Ultra96 : {packet_bytes}\n')
 

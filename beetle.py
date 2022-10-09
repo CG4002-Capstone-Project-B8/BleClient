@@ -1,8 +1,9 @@
 from bluepy.btle import DefaultDelegate, Peripheral, BTLEException
 import struct
 import time
-from constants import TPacketType, TClientState
+from constants import TPacketType
 import packetize
+import csv
 
 
 class BeetleDelegate(DefaultDelegate):
@@ -57,6 +58,12 @@ class Beetle:
         self.queue = player_queue
         self.can_enqueue_data = False
         self.packet_attr = None
+
+        if self.device_id == 1:
+            self.csv_file = open('imu.csv', 'x', encoding='UTF8', newline='')
+            self.csv_writer = csv.writer(self.csv_file)
+            self.headers = ['accX', 'accY', 'accZ', 'gyroX', 'gyroY', 'gyroZ']
+            self.csv_writer.writerow(self.headers)
 
     def setDelegate(self, delegate):
         self.delegate = delegate
@@ -117,12 +124,11 @@ class Beetle:
         self.send_time = time.perf_counter()
 
     def run(self):
-        while True:
-            if time.perf_counter() - self.send_time > Beetle.TIMEOUT:
-                print(f"Timeout, re-initiating handshake with Beetle - {self.mac_address}")
-                self.initiateHandshake()
+        if time.perf_counter() - self.send_time > Beetle.TIMEOUT:
+            print(f"Timeout, re-initiating handshake with Beetle - {self.mac_address}")
+            self.initiateHandshake()
 
-            self.waitForNotifications()
+        self.waitForNotifications()
 
     def debugData(self, data):
         self.buffer += data
@@ -171,17 +177,19 @@ class Beetle:
 
     def handleData(self, data):
         # for debugging
-        print(f'Packet received from {self.mac_address}:')
-        print(data)
+        # print(f'Packet received from {self.mac_address}:')
+        # print(data)
 
         if packetize.isInvalidPacket(data):
             # self.num_packets_dropped += 1
-            self.sendNack()
-            return
+            if self.device_id == 2 or self.device_id == 3:
+                self.sendNack()
+            if self.device_id == 1:
+                self.sendAck()
         else:
             # deserialize data, get a tuple named packet_attr
             packet_attr = packetize.deserialize(data)
-            print(f'Packet attributes: {packet_attr}')
+            # print(f'Packet attributes: {packet_attr}')
             packet_type = packet_attr[0]
 
             if packet_type == TPacketType.PACKET_TYPE_DATA.value:
@@ -197,24 +205,37 @@ class Beetle:
     def processData(self, packet_attr):
         # for throughput calculation
         self.num_packets_received += 1
-        self.showThroughput()
+        # self.showThroughput()
 
         self.ack_seqnum = packet_attr[1]
         self.packet_attr = packet_attr
 
+        self.enqueueData()
+
+        if self.device_id == 1:
+            processed_gyro_data = tuple(map(lambda x: x / 16384, list(packet_attr[6:9])))
+            row = [*packet_attr[9:12], *processed_gyro_data]
+            self.csv_writer.writerow(row)
+
+    def enqueueData(self):
+        print(f"Current queue size: {self.queue.qsize()}")
         # Don't enqueue unless all beetles are connected
         if not self.can_enqueue_data:
+            print(f"Cannot enqueue because not all Beetles are connected - {self.mac_address}")
             return
 
         # Don't enqueue if no shot was sent
         if self.device_id == 2 and not self.packet_attr[4]:
+            # print(f"Cannot enqueue because player did not send shot - {self.mac_address}")
             return
 
         # Don't enqueue if no shot was received
         if self.device_id == 3 and not self.packet_attr[5]:
+            # print(f"Cannot enqueue because player did not get shot - {self.mac_address}")
             return
 
-        self.queue.put_nowait(self.packet_attr)
+        self.queue.put(self.packet_attr)
+        print(f"Enqueued data: {self.packet_attr} - {self.mac_address}")
 
     def sendAck(self):
         ack_packet_to_send = packetize.createPacket(TPacketType.PACKET_TYPE_ACK,
