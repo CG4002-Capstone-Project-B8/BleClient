@@ -35,7 +35,7 @@ class RelayPacket:
             self.details |= (packet_attr[5] << RelayPacket.RECEIVE_SHOT_SHIFT)
 
     def processGyroData(self):
-        self.gyro_data[:] = map(lambda d: d / 16384, self.gyro_data)
+        self.gyro_data[:] = map(lambda d: d / 131, self.gyro_data)
         self.gyro_data = tuple(self.gyro_data)
 
     def toBytes(self):
