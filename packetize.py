@@ -38,7 +38,7 @@ def serialize(details):
     packet = struct.pack(fmt, details, bytes(18), bytes(1))
 
     # debugging purposes only
-    # print("Sending: ", interpretDetails(details[0]))
+    print("Sending: ", interpretDetails(details[0]))
 
     packet_arr = bytearray(packet)
     packet_arr[CHECKSUM_POS] = getChecksum(packet[:CHECKSUM_POS])
@@ -80,11 +80,11 @@ def interpretDetails(details):
     # new bits introduced for status of player
     sent_shot = (details & SEND_SHOT_MASK) >> SEND_SHOT_SHIFT
     if sent_shot:
-        print("Sent shot!\n\n")
+        print("Sent shot!\n")
 
     received_shot = (details & RECEIVE_SHOT_MASK) >> RECEIVE_SHOT_SHIFT
     if received_shot:
-        print("Received shot!\n\n")
+        print("Received shot!\n")
 
     return packet_type, seqnum, player_id, device_id, sent_shot, received_shot
 

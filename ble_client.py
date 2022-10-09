@@ -1,12 +1,12 @@
 from bluepy.btle import BTLEException
 from beetle import Beetle, BeetleDelegate
-from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor
+from concurrent.futures import ThreadPoolExecutor
 from multiprocessing import Queue, Value, Process
 from ultra96_client import Ultra96Client
 
 # get the MAC addresses here and separate them into player 1 and player 2
 # in the order: Player1 -> Player 2, IMU -> Emitter -> Receiver
-BEETLE_ADDRESSES = [["d0:39:72:bf:c3:d1", "d0:39:72:bf:cd:1e", "d0:39:72:bf:c3:90"],
+BEETLE_ADDRESSES = [["d0:39:72:bf:c3:d1", "d0:39:72:bf:cd:1e", "d0:39:72:bf:bd:d4"],
                     ["c4:be:84:20:1a:0c"]]
 
 TOTAL_BEETLES = 1
@@ -41,14 +41,14 @@ def beetle_thread(beetle_address, player_id, device_id, player_queue):
         try:
             while True:
                 beetle.run()
-                print("Beetles currently connected: ", num_currently_connected_beetles.value)
+                # print("Beetles currently connected: ", num_currently_connected_beetles.value)
                 beetle.setCanEnqueue(num_currently_connected_beetles.value >= TOTAL_BEETLES)
         except BTLEException as e:
             print(e, f'- {beetle_address}')
             beetle.resetAttributes()
             beetle.disconnect()
             beetle.reconnect()
-        except KeyboardInterrupt as kb:
+        except KeyboardInterrupt as kbi:
             print(f"Exiting - {beetle_address}")
             beetle.disconnect()
             exit()
@@ -76,7 +76,7 @@ def main():
 
     # with ProcessPoolExecutor() as process_executor:
     #    process_executor.submit(player_process, PLAYER_ONE, TEST_BEETLES, p1_queue)
-    p1 = Process(target=player_process, args=(PLAYER_ONE, TEST_BEETLES, p1_queue))
+    p1 = Process(target=player_process, args=(PLAYER_ONE, PLAYER_ONE_BEETLES, p1_queue))
     u96 = Process(target=client_process, args=(p1_queue, p2_queue))
 
     print("Starting process for Player 1")
@@ -90,8 +90,9 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
-    # p1q = Queue()
+    # main()
+
+    p1q = Queue()
     # p2_queue = Queue()
 
     # with ProcessPoolExecutor(max_workers=1) as process_executor:
@@ -99,7 +100,7 @@ if __name__ == "__main__":
     #     process_executor.submit(player_process, PLAYER_TWO, PLAYER_TWO_BEETLES, p2_queue)
     #     process_executor.submit(client_process, p1_queue, p2_queue)
 
-    # beetle_thread("d0:39:72:bf:c3:d1", 0, 1)
+    beetle_thread("d0:39:72:bf:c3:d1", 0, 1, p1q)
     # beetle_thread("d0:39:72:bf:cd:1e", 0, 2)
     # beetle_thread("d0:39:72:bf:c3:90", 0, 3)
 
