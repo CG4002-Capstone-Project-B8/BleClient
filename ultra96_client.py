@@ -38,7 +38,7 @@ class Ultra96Client:
     def run(self):
         self.tunnelToUltra96()
         # while True:
-            # self.sendPackets()
+        #     self.sendPackets()
 
     def tunnelToUltra96(self):
         with sshtunnel.open_tunnel(
@@ -56,31 +56,25 @@ class Ultra96Client:
                     self.sendPackets(s)
 
     def sendPackets(self, sock):
-        # print('ULTRA96_CLIENT: Running, watching player queues')
         if not self.p1_queue.empty():
             print('ULTRA96_CLIENT: Player1 queue has data')
-            packet_to_send = RelayPacket()
-            ble_packet_attr = self.p1_queue.get()
-            packet_to_send.extractBlePacketData(ble_packet_attr)
-
-            packet_bytes = packet_to_send.toBytes()
-            packet_tuple = packet_to_send.toTuple()
-            sock.sendall(packet_bytes)
-            # logging.info(f'Packet sent to Ultra96: {packet_to_send.toTuple()}')
-            # logging.info(f'Bytes sent to Ultra96 : {packet_to_send.toBytes()}\n')
-            print(f'ULTRA96_CLIENT: Packet sent to Ultra96: {packet_tuple}')
-            print(f'ULTRA96_CLIENT: Bytes sent to Ultra96 : {packet_bytes}\n')
+            extractFromQueueAndSend(self.p1_queue, sock)
 
         if not self.p2_queue.empty():
-            packet_to_send = RelayPacket()
-            ble_packet_attr = self.p2_queue.get()
-            packet_to_send.extractBlePacketData(ble_packet_attr)
+            print('ULTRA96_CLIENT: Player2 queue has data')
+            extractFromQueueAndSend(self.p2_queue, sock)
 
-            packet_bytes = packet_to_send.toBytes()
-            packet_tuple = packet_to_send.toTuple()
-            sock.sendall(packet_bytes)
-            # logging.info(f'Packet sent to Ultra96: {packet_to_send.toTuple()}')
-            # logging.info(f'Bytes sent to Ultra96 : {packet_to_send.toBytes()}\n')
-            print(f'Packet sent to Ultra96: {packet_tuple}')
-            print(f'Bytes sent to Ultra96 : {packet_bytes}\n')
 
+def extractFromQueueAndSend(player_queue, sock):
+    packet_to_send = RelayPacket()
+    ble_packet_attr = player_queue.get()
+    packet_to_send.extractBlePacketData(ble_packet_attr)
+
+    packet_bytes = packet_to_send.toBytes()
+    packet_tuple = packet_to_send.toTuple()
+    sock.sendall(packet_bytes)
+
+    # logging.info(f'Packet sent to Ultra96: {packet_to_send.toTuple()}')
+    # logging.info(f'Bytes sent to Ultra96 : {packet_to_send.toBytes()}\n')
+    print(f'ULTRA96_CLIENT: Packet sent to Ultra96: {packet_tuple}')
+    print(f'ULTRA96_CLIENT: Bytes sent to Ultra96 : {packet_bytes}\n')
