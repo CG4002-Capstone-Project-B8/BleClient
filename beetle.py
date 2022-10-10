@@ -4,12 +4,7 @@ import time
 from constants import TPacketType
 import packetize
 import csv
-
-IMU = 1
-EMITTER = 2
-RECEIVER = 3
-
-device_dict = {IMU: 'IMU', EMITTER: 'Emitter', RECEIVER: 'Receiver'}
+from globals import num_currently_connected_beetles, TOTAL_BEETLES, device_dict, IMU, EMITTER, RECEIVER
 
 
 class BeetleDelegate(DefaultDelegate):
@@ -30,7 +25,7 @@ class Beetle:
 
     PACKET_SIZE = 20
 
-    # timeout value of 1.5 seconds
+    # timeout value of 2 seconds
     TIMEOUT = 2
 
     def __init__(self, mac_address, player_id, device_id, player_queue):
@@ -65,6 +60,7 @@ class Beetle:
         self.can_enqueue_data = False
         self.packet_attr = None
 
+        # for collection of AI data
         if self.device_id == IMU:
             self.csv_file = open('imu.csv', 'w', encoding='UTF8', newline='')
             self.csv_writer = csv.writer(self.csv_file)
@@ -77,8 +73,8 @@ class Beetle:
     def waitForNotifications(self):
         self.peripheral.waitForNotifications(1.5)
 
-    def setCanEnqueue(self, can_enqueue):
-        self.can_enqueue_data = can_enqueue
+    def setCanEnqueue(self):
+        self.can_enqueue_data = (num_currently_connected_beetles.value == TOTAL_BEETLES)
 
     def connect(self):
         # initiate a connection to Beetle
@@ -86,6 +82,7 @@ class Beetle:
 
         # the above line running indicates a successful connection to the Beetle
         print(f"Connected successfully to Beetle - {device_dict[self.device_id]}")
+        num_currently_connected_beetles.value += 1
 
         # obtain GATT service and characteristic handle for Serial characteristic
         serial_service = self.peripheral.getServiceByUUID(Beetle.SERIAL_SERVICE_UUID)
@@ -109,6 +106,7 @@ class Beetle:
 
     def disconnect(self):
         self.peripheral.disconnect()
+        num_currently_connected_beetles.value -= 1
 
     def reconnect(self):
         print(f"Attempting to reconnect to Beetle - {device_dict[self.device_id]}")
@@ -136,6 +134,7 @@ class Beetle:
             print(f"Timeout, re-initiating handshake with Beetle - {device_dict[self.device_id]}")
             self.initiateHandshake()
 
+        self.setCanEnqueue()
         self.waitForNotifications()
 
     def debugData(self, data):
@@ -148,8 +147,7 @@ class Beetle:
             self.buffer = bytes(0)
 
     def checkBuffer(self, data):
-        # buffer might be empty after the fragmentation has been handled
-        # so it is filled with the current data
+        # buffer might be empty after the fragmentation has been handled so it is filled with the current data
         if self.current_buffer_length == 0:
             self.buffer = data
             self.current_buffer_length = len(data)

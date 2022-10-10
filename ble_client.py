@@ -1,16 +1,14 @@
 from bluepy.btle import BTLEException
 from beetle import Beetle, BeetleDelegate
 from concurrent.futures import ThreadPoolExecutor
-from multiprocessing import Queue, Value, Process
+from multiprocessing import Queue, Process
 from ultra96_client import Ultra96Client
+from globals import num_currently_connected_beetles
 
 # get the MAC addresses here and separate them into player 1 and player 2
 # in the order: Player1 -> Player 2, IMU -> Emitter -> Receiver
 BEETLE_ADDRESSES = [["d0:39:72:bf:c3:d1", "d0:39:72:bf:cd:1e", "d0:39:72:bf:bd:d4"],
                     ["c4:be:84:20:1a:0c"]]
-
-TOTAL_BEETLES = 1
-num_currently_connected_beetles = Value('i', 0)
 
 PLAYER_ONE = 0
 PLAYER_TWO = 1
@@ -34,15 +32,11 @@ def beetle_thread(beetle_address, player_id, device_id, player_queue):
             print(f"Failed to connect - {beetle_address}, retrying")
             continue
 
-    global num_currently_connected_beetles
-    num_currently_connected_beetles.value += 1
-
     while True:
         try:
             while True:
                 beetle.run()
-                # print("Beetles currently connected: ", num_currently_connected_beetles.value)
-                beetle.setCanEnqueue(num_currently_connected_beetles.value >= TOTAL_BEETLES)
+                print("Beetles currently connected: ", num_currently_connected_beetles.value)
         except BTLEException as e:
             print(e, f'- {beetle_address}')
             beetle.resetAttributes()
