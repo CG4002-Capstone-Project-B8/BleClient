@@ -147,6 +147,12 @@ class Beetle:
             self.buffer = bytes(0)
 
     def checkBuffer(self, data):
+        self.buffer += data
+        if len(self.buffer) >= self.PACKET_SIZE:
+            self.handleData(self.buffer[:self.PACKET_SIZE])
+            self.buffer = self.buffer[self.PACKET_SIZE:]
+
+    def checkBufferWrong(self, data):
         # buffer might be empty after the fragmentation has been handled so it is filled with the current data
         if self.current_buffer_length == 0:
             self.buffer = data
@@ -260,10 +266,10 @@ class Beetle:
     def showThroughput(self):
         self.end_time = time.perf_counter()
         total_time = self.end_time - self.start_time
-        throughput = (self.num_packets_received * Beetle.PACKET_SIZE * 8) / (1000 * total_time)
+        throughput = self.num_packets_received / total_time
 
         print(f"Time elapsed:", "{:.2f},".format(total_time))
-        print(f"Received {self.num_packets_received} packets - {device_dict[self.device_id]}")
+        # print(f"Received {self.num_packets_received} packets - {device_dict[self.device_id]}")
         # print(f"Dropped {self.num_packets_dropped} packets - {device_dict[self.device_id]}")
         # print(f"{self.num_packets_fragmented} packets fragmented - {device_dict[self.device_id]}")
-        print(f"Throughput of Beetle - {device_dict[self.device_id]} =", "{:.3f}".format(throughput), "kbps")
+        print(f"Throughput of Beetle - {device_dict[self.device_id]} =", "{:.3f}".format(throughput), "packets/s")
