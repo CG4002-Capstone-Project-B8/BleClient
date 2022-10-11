@@ -40,13 +40,15 @@ class Beetle:
         self.peripheral = None
 
         self.ack_seqnum = 0
+        self.handshake_done = False
 
         # attributes for state management and fragmentation
         self.buffer = bytes(0)
         self.current_buffer_length = 0
 
         # attribute for timeout
-        self.send_time = time.perf_counter()
+        # self.send_time = 0
+        self.receive_time = 0
 
         # for measuring throughput
         self.start_time = None
@@ -61,11 +63,12 @@ class Beetle:
         self.packet_attr = None
 
         # for collection of AI data
-        if self.device_id == IMU:
-            self.csv_file = open('imu.csv', 'w', encoding='UTF8', newline='')
-            self.csv_writer = csv.writer(self.csv_file)
-            self.headers = ['accX', 'accY', 'accZ', 'gyroX', 'gyroY', 'gyroZ']
-            self.csv_writer.writerow(self.headers)
+        # if self.device_id == IMU:
+        #     self.csv_file = open('imu.csv', 'w', encoding='UTF8', newline='')
+        #     self.csv_writer = csv.writer(self.csv_file)
+        #     self.headers = ['accX', 'accY', 'accZ', 'gyroX', 'gyroY', 'gyroZ']
+        #     self.csv_writer.writerow(self.headers)
+        #     self.num_rows = 0
 
     def setDelegate(self, delegate):
         self.delegate = delegate
@@ -103,6 +106,7 @@ class Beetle:
         self.num_packets_received = 0
         self.start_time = 0
         self.end_time = 0
+        self.handshake_done = False
 
     def disconnect(self):
         self.peripheral.disconnect()
@@ -127,10 +131,12 @@ class Beetle:
                                                           self.device_id)
         self.peripheral.writeCharacteristic(self.char_handle, val=handshake_packet_to_send)
 
-        self.send_time = time.perf_counter()
+        # self.send_time = time.perf_counter()
 
     def run(self):
-        if time.perf_counter() - self.send_time > Beetle.TIMEOUT:
+        # if laptop hasn't received data from Beetle in a while, try reset the Beetle
+        if time.perf_counter() - self.receive_time > Beetle.TIMEOUT:
+            self.handshake_done = False
             print(f"Timeout, re-initiating handshake with Beetle - {device_dict[self.device_id]}")
             self.initiateHandshake()
 
@@ -147,57 +153,24 @@ class Beetle:
             self.buffer = bytes(0)
 
     def checkBuffer(self, data):
+        # receive data at this time
+        self.receive_time = time.perf_counter()
+
         self.buffer += data
         if len(self.buffer) >= self.PACKET_SIZE:
             self.handleData(self.buffer[:self.PACKET_SIZE])
             self.buffer = self.buffer[self.PACKET_SIZE:]
 
-    def checkBufferWrong(self, data):
-        # buffer might be empty after the fragmentation has been handled so it is filled with the current data
-        if self.current_buffer_length == 0:
-            self.buffer = data
-            self.current_buffer_length = len(data)
-
-        # check if current buffer has a lack of bytes, meaning a packet has been fragmented
-        deficit_length = Beetle.PACKET_SIZE - self.current_buffer_length
-
-        # if deficit_length != 0:
-        #     self.num_packets_fragmented += 1
-
-        # negative deficit means we have extra bytes in the buffer, we want to immediately
-        # clear out the buffer, reliable protocol (prevent any loss of data)
-        while deficit_length < 0:
-            self.handleData(self.buffer[:self.PACKET_SIZE])
-            self.buffer = self.buffer[self.PACKET_SIZE:]
-            deficit_length = Beetle.PACKET_SIZE - len(self.buffer)
-
-        # add the first deficit_length bytes from data to the buffer
-        self.buffer += data[:deficit_length]
-
-        if len(self.buffer) == self.PACKET_SIZE:
-            # data here has length == PACKET_SIZE, handle it
-            self.handleData(self.buffer)
-
-            # clear out the buffer
-            self.buffer = self.buffer[self.PACKET_SIZE:]
-            self.current_buffer_length = len(self.buffer)
-
-        # there is excess data received which has not been processed, store it in the buffer
-        if deficit_length > 0:
-            self.buffer = data[deficit_length:]
-            self.current_buffer_length = len(self.buffer)
-
     def handleData(self, data):
         # for debugging
-        print(f'Raw bytes received from {device_dict[self.device_id]}:')
-        print(data)
+        # print(f'Raw bytes received from {device_dict[self.device_id]}:', data)
 
         # drop corrupted packets
         if packetize.isInvalidPacket(data):
             return
 
         packet_attr = packetize.deserialize(data)
-        print(f'Packet attributes: {packet_attr} - {device_dict[self.device_id]}')
+        # print(f'Packet attributes: {packet_attr} - {device_dict[self.device_id]}')
         packet_type = packet_attr[0]
 
         if packet_type == TPacketType.PACKET_TYPE_DATA.value:
@@ -205,25 +178,29 @@ class Beetle:
                 self.start_time = time.perf_counter()
 
             self.processData(packet_attr)
-        elif packet_type == TPacketType.PACKET_TYPE_ACK.value:
+        elif packet_type == TPacketType.PACKET_TYPE_ACK.value and not self.handshake_done:
             self.sendHandshakeAck()
             print(f"Three-way Handshake complete! Ready to receive data - {device_dict[self.device_id]}")
+            self.handshake_done = True
 
     def processData(self, packet_attr):
         # for throughput calculation
         self.num_packets_received += 1
-        self.showThroughput()
+        # self.showThroughput()
 
         self.ack_seqnum = packet_attr[1]
         self.packet_attr = packet_attr
 
-        self.enqueueData()
+        # self.enqueueData()
 
         # write data to csv file for AI component
-        if self.device_id == IMU:
-            processed_gyro_data = tuple(map(lambda x: x / 131, list(packet_attr[6:9])))
-            row = [*packet_attr[9:12], *processed_gyro_data]
-            self.csv_writer.writerow(row)
+        # if self.device_id == IMU and self.num_rows <= 200:
+        #    processed_gyro_data = tuple(map(lambda x: x / 131, list(packet_attr[6:9])))
+        #    row = [*packet_attr[9:12], *processed_gyro_data]
+        #    self.csv_writer.writerow(row)
+        #    self.num_rows += 1
+
+        self.enqueueData()
 
     def enqueueData(self):
         print(f"Current queue size: {self.queue.qsize()}")
@@ -252,7 +229,7 @@ class Beetle:
                                                     self.device_id)
         self.peripheral.writeCharacteristic(self.char_handle, val=ack_packet_to_send)
 
-        self.send_time = time.perf_counter()
+        # self.send_time = time.perf_counter()
 
     def sendNack(self):
         nack_packet_to_send = packetize.createPacket(TPacketType.PACKET_TYPE_NACK,
@@ -261,7 +238,7 @@ class Beetle:
                                                      self.device_id)
         self.peripheral.writeCharacteristic(self.char_handle, val=nack_packet_to_send)
 
-        self.send_time = time.perf_counter()
+        # self.send_time = time.perf_counter()
 
     def showThroughput(self):
         self.end_time = time.perf_counter()

@@ -6,4 +6,4 @@ RECEIVER = 3
 device_dict = {IMU: 'IMU', EMITTER: 'Emitter', RECEIVER: 'Receiver'}
 
 num_currently_connected_beetles = Value('i', 0)
-TOTAL_BEETLES = 3
+TOTAL_BEETLES = 1

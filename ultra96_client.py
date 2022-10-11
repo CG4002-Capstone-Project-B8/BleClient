@@ -38,7 +38,7 @@ class Ultra96Client:
     def run(self):
         self.tunnelToUltra96()
         # while True:
-        #     self.sendPackets()
+        #    self.sendPackets()
 
     def tunnelToUltra96(self):
         with sshtunnel.open_tunnel(

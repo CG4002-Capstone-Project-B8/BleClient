@@ -4,6 +4,7 @@ from concurrent.futures import ThreadPoolExecutor
 from multiprocessing import Queue, Process
 from ultra96_client import Ultra96Client
 from globals import num_currently_connected_beetles
+import time
 
 # get the MAC addresses here and separate them into player 1 and player 2
 # in the order: Player1 -> Player 2, IMU -> Emitter -> Receiver
@@ -30,6 +31,7 @@ def beetle_thread(beetle_address, player_id, device_id, player_queue):
             break
         except BTLEException as e:
             print(f"Failed to connect - {beetle_address}, retrying")
+            time.sleep(1)
             continue
 
     while True:
@@ -95,8 +97,8 @@ if __name__ == "__main__":
     #     process_executor.submit(client_process, p1_queue, p2_queue)
 
     beetle_thread("d0:39:72:bf:c3:d1", 0, 1, p1q)
-    # beetle_thread("d0:39:72:bf:cd:1e", 0, 2)
-    # beetle_thread("d0:39:72:bf:c3:90", 0, 3)
+    # beetle_thread("d0:39:72:bf:cd:1e", 0, 2, p1q)
+    # beetle_thread("d0:39:72:bf:bd:d4", 1, 3, p1q)
 
     # beetle_thread("c4:be:84:20:1a:0c", 0, 1, p1q)
 
