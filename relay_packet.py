@@ -56,7 +56,6 @@ if __name__ == "__main__":
     p_bytes = rp.toBytes()
     print(f'{p_bytes}, {len(p_bytes)} bytes sent')
     print(rp.toTuple())
-    print(rp.accel_data)
 
     data = struct.unpack('!c6f', p_bytes)
     print(data)
