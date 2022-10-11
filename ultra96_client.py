@@ -71,6 +71,10 @@ class Ultra96Client:
             print('ULTRA96_CLIENT: Player2 queue has data')
             extractFromQueueAndSend(self.p2_queue, sock)
 
+# TODO: delete this
+import numpy as np
+test_queue = []
+has_saved = False
 
 def extractFromQueueAndSend(player_queue, sock):
     packet_to_send = RelayPacket()
@@ -79,6 +83,14 @@ def extractFromQueueAndSend(player_queue, sock):
 
     packet_bytes = packet_to_send.toBytes()
     packet_tuple = packet_to_send.toTuple()
+
+    if len(test_queue) < 200:
+        test_queue.append(packet_tuple)
+    elif not has_saved:
+        d = np.array(test_queue)
+        np.save('relay_imu_data', d)
+        has_saved = True
+
     sock.sendall(packet_bytes)
 
     print(f'ULTRA96_CLIENT: Packet sent to Ultra96: {packet_tuple}')
