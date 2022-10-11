@@ -2,7 +2,7 @@ from dotenv import load_dotenv
 import sshtunnel
 import os
 import socket
-import logging
+import time
 from relay_packet import RelayPacket
 
 NUM_BEETLES_PER_PLAYER = 3
@@ -48,13 +48,20 @@ class Ultra96Client:
                 local_bind_address=(self.data_client, self.data_client_port),  # the data sent from relay laptop to 127.0.0.1:8000 will be forwarded
                 remote_bind_address=(self.data_server, self.data_server_port)  # to the ultra96
         ) as sunfire_tunnel:
-            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-                print(f'Connecting to {self.data_client}:{self.data_client_port}')
-                s.connect((self.data_client, self.data_client_port))
-                print(f'Connected to {self.data_server}:{self.data_server_port}')
-                while True:
-                    self.sendPackets(s)
-
+            is_connected = False
+            while not is_connected:
+                try:
+                    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+                        print(f'Connecting to {self.data_client}:{self.data_client_port}')
+                        s.connect((self.data_client, self.data_client_port))
+                        print(f'Connected to {self.data_server}:{self.data_server_port}')
+                        is_connected = True
+                        while True:
+                            self.sendPackets(s)
+                except ConnectionRefusedError:
+                    print(f'Failed to connect to data_server at {self.data_server}:{self.data_server_port}. Retrying...')
+                    time.sleep(2)
+    
     def sendPackets(self, sock):
         if not self.p1_queue.empty():
             print('ULTRA96_CLIENT: Player1 queue has data')
@@ -74,7 +81,5 @@ def extractFromQueueAndSend(player_queue, sock):
     packet_tuple = packet_to_send.toTuple()
     sock.sendall(packet_bytes)
 
-    # logging.info(f'Packet sent to Ultra96: {packet_to_send.toTuple()}')
-    # logging.info(f'Bytes sent to Ultra96 : {packet_to_send.toBytes()}\n')
     print(f'ULTRA96_CLIENT: Packet sent to Ultra96: {packet_tuple}')
     print(f'ULTRA96_CLIENT: Bytes sent to Ultra96 : {packet_bytes}\n')
