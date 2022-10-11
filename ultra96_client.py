@@ -65,21 +65,21 @@ class Ultra96Client:
     def checkPlayerQueues(self, sock):
         if not self.p1_queue.empty():
             print('ULTRA96_CLIENT: Player1 queue has data')
-            packet_to_send, device_id = extractFromQueue(self.p1_queue)
+            p1_packet, p1_device_id = extractFromQueue(self.p1_queue)
 
-            if device_id == EMITTER or device_id == RECEIVER:
-                sendPacket(sock, packet_to_send)
+            if p1_device_id == EMITTER or p1_device_id == RECEIVER:
+                sendPacket(sock, p1_packet)
                 return
 
-            if not self.p1_can_send:
-                accel_x, accel_y, accel_z = packet_to_send.accel_data
+            if not self.p1_can_send and p1_device_id == IMU:
+                accel_x, accel_y, accel_z = p1_packet.accel_data
                 accel_magnitude = calculateAccelMagnitude(accel_x, accel_y, accel_z)
 
                 if accel_magnitude > MAGNITUDE_THRESHOLD:
                     self.p1_can_send = True
 
             if self.p1_can_send and self.p1_counter < NUM_PACKETS:
-                sendPacket(sock, packet_to_send)
+                sendPacket(sock, p1_packet)
                 self.p1_counter += 1
                 if self.p1_counter >= NUM_PACKETS:
                     self.p1_can_send = False
@@ -87,21 +87,21 @@ class Ultra96Client:
 
         if not self.p2_queue.empty():
             print('ULTRA96_CLIENT: Player2 queue has data')
-            packet_to_send, device_id = extractFromQueue(self.p2_queue)
+            p2_packet, p2_device_id = extractFromQueue(self.p2_queue)
 
-            if device_id == EMITTER or device_id == RECEIVER:
-                sendPacket(sock, packet_to_send)
+            if p2_device_id == EMITTER or p2_device_id == RECEIVER:
+                sendPacket(sock, p2_packet)
                 return
 
-            if not self.p2_can_send:
-                accel_x, accel_y, accel_z = packet_to_send.accel_data
+            if not self.p2_can_send and p2_device_id == IMU:
+                accel_x, accel_y, accel_z = p2_packet.accel_data
                 accel_magnitude = calculateAccelMagnitude(accel_x, accel_y, accel_z)
 
                 if accel_magnitude > MAGNITUDE_THRESHOLD:
                     self.p2_can_send = True
 
             if self.p2_can_send and self.p2_counter < NUM_PACKETS:
-                sendPacket(sock, packet_to_send)
+                sendPacket(sock, p2_packet)
                 self.p2_counter += 1
                 if self.p2_counter >= NUM_PACKETS:
                     self.p2_can_send = False
