@@ -86,9 +86,9 @@ def main():
 
 
 if __name__ == "__main__":
-    # main()
+    main()
 
-    p1q = Queue()
+    # p1q = Queue()
     # p2_queue = Queue()
 
     # with ProcessPoolExecutor(max_workers=1) as process_executor:
@@ -96,7 +96,7 @@ if __name__ == "__main__":
     #     process_executor.submit(player_process, PLAYER_TWO, PLAYER_TWO_BEETLES, p2_queue)
     #     process_executor.submit(client_process, p1_queue, p2_queue)
 
-    beetle_thread("d0:39:72:bf:c3:d1", 0, 1, p1q)
+    # beetle_thread("d0:39:72:bf:c3:d1", 0, 1, p1q)
     # beetle_thread("d0:39:72:bf:cd:1e", 0, 2, p1q)
     # beetle_thread("d0:39:72:bf:bd:d4", 1, 3, p1q)
 

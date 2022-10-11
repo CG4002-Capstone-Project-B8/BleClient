@@ -41,7 +41,7 @@ class RelayPacket:
     def toBytes(self):
         fmt = '!c6f'
         self.details = self.details.to_bytes(1, 'little')
-        packet_bytes = struct.pack(fmt, self.details, *self.gyro_data, *self.accel_data)
+        packet_bytes = struct.pack(fmt, self.details, *self.accel_data, *self.gyro_data)
         return packet_bytes
 
     def toTuple(self):
@@ -56,6 +56,7 @@ if __name__ == "__main__":
     p_bytes = rp.toBytes()
     print(f'{p_bytes}, {len(p_bytes)} bytes sent')
     print(rp.toTuple())
+    print(rp.accel_data)
 
     data = struct.unpack('!c6f', p_bytes)
     print(data)
