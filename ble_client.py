@@ -70,8 +70,6 @@ def main():
     p1_queue = Queue()
     p2_queue = Queue()
 
-    # with ProcessPoolExecutor() as process_executor:
-    #    process_executor.submit(player_process, PLAYER_ONE, TEST_BEETLES, p1_queue)
     p1 = Process(target=player_process, args=(PLAYER_ONE, PLAYER_ONE_BEETLES, p1_queue))
     u96 = Process(target=client_process, args=(p1_queue, p2_queue))
 
