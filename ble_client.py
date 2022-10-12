@@ -3,7 +3,7 @@ from beetle import Beetle, BeetleDelegate
 from concurrent.futures import ThreadPoolExecutor
 from multiprocessing import Queue, Process
 from ultra96_client import Ultra96Client
-from globals import num_currently_connected_beetles
+from globals import num_currently_connected_beetles, device_dict
 import time
 
 # get the MAC addresses here and separate them into player 1 and player 2
@@ -24,13 +24,13 @@ def beetle_thread(beetle_address, player_id, device_id, player_queue):
     beetle = Beetle(beetle_address, player_id, device_id, player_queue)
     beetle.setDelegate(BeetleDelegate(beetle))
 
-    print(f"Connecting to Beetle - {beetle_address}")
+    print(f"Connecting to Beetle - {device_dict[device_id]}")
     while True:
         try:
             beetle.connect()
             break
         except BTLEException as e:
-            print(f"Failed to connect - {beetle_address}, retrying")
+            print(f"Failed to connect - {device_dict[device_id]}, retrying")
             time.sleep(1)
             continue
 
@@ -40,12 +40,11 @@ def beetle_thread(beetle_address, player_id, device_id, player_queue):
                 beetle.run()
                 print("Beetles currently connected: ", num_currently_connected_beetles.value)
         except BTLEException as e:
-            print(e, f'- {beetle_address}')
-            beetle.resetAttributes()
+            print(e, f'- {device_dict[device_id]}')
             beetle.disconnect()
             beetle.reconnect()
         except KeyboardInterrupt as kbi:
-            print(f"Exiting - {beetle_address}")
+            print(f"Exiting - {device_dict[device_id]}")
             beetle.disconnect()
             exit()
 
