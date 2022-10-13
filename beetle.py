@@ -48,7 +48,7 @@ class Beetle:
 
         # attribute for timeout
         # self.send_time = 0
-        self.receive_time = 0
+        self.receive_time = time.perf_counter()
 
         # for measuring throughput
         self.start_time = None
@@ -77,7 +77,7 @@ class Beetle:
         self.peripheral.waitForNotifications(1.5)
 
     def setCanEnqueue(self):
-        self.can_enqueue_data = (num_currently_connected_beetles.value == TOTAL_BEETLES)
+        self.can_enqueue_data = (num_currently_connected_beetles.value >= TOTAL_BEETLES)
 
     def connect(self):
         # initiate a connection to Beetle
@@ -106,9 +106,12 @@ class Beetle:
         self.num_packets_received = 0
         self.start_time = 0
         self.end_time = 0
+
+        self.receive_time = 0
         self.handshake_done = False
 
     def disconnect(self):
+        self.resetAttributes()
         self.peripheral.disconnect()
         num_currently_connected_beetles.value -= 1
 
@@ -123,17 +126,20 @@ class Beetle:
                 continue
 
     def initiateHandshake(self):
-        print(f"Starting handshake with Beetle - {device_dict[self.device_id]}")
+        print(f"Sending Handshake to Beetle - {device_dict[self.device_id]}")
 
-        handshake_packet_to_send = packetize.createPacket(TPacketType.PACKET_TYPE_HANDSHAKE,
-                                                          self.ack_seqnum,
-                                                          self.player_id,
-                                                          self.device_id)
-        self.peripheral.writeCharacteristic(self.char_handle, val=handshake_packet_to_send)
-
+        # handshake_packet_to_send = packetize.createPacket(TPacketType.PACKET_TYPE_HANDSHAKE,
+        #                                                   self.ack_seqnum,
+        #                                                   self.player_id,
+        #                                                   self.device_id)
+        self.peripheral.writeCharacteristic(self.char_handle, val=bytes('H', 'utf-8'))
         # self.send_time = time.perf_counter()
 
     def run(self):
+        # this is a trick to make sure no double handshake is sent upon turning off and on the Beetle
+        if self.receive_time == 0:
+            self.receive_time = time.perf_counter()
+
         # if laptop hasn't received data from Beetle in a while, try reset the Beetle
         if time.perf_counter() - self.receive_time > Beetle.TIMEOUT:
             self.handshake_done = False
@@ -143,17 +149,8 @@ class Beetle:
         self.setCanEnqueue()
         self.waitForNotifications()
 
-    def debugData(self, data):
-        self.buffer += data
-
-        if len(self.buffer) >= 200:
-            for i in range(10):
-                segment = self.buffer[i*20:(i*20 + 20)]
-                self.handleData(segment)
-            self.buffer = bytes(0)
-
     def checkBuffer(self, data):
-        # receive data at this time
+        # received data at this time
         self.receive_time = time.perf_counter()
 
         self.buffer += data
@@ -179,6 +176,7 @@ class Beetle:
 
             self.processData(packet_attr)
         elif packet_type == TPacketType.PACKET_TYPE_ACK.value and not self.handshake_done:
+            print(f"Received Ack from Beetle - {device_dict[self.device_id]}")
             self.sendHandshakeAck()
             print(f"Three-way Handshake complete! Ready to receive data - {device_dict[self.device_id]}")
             self.handshake_done = True
@@ -191,7 +189,7 @@ class Beetle:
         self.ack_seqnum = packet_attr[1]
         self.packet_attr = packet_attr
 
-        # self.enqueueData()
+        self.enqueueData()
 
         # write data to csv file for AI component
         # if self.device_id == IMU and self.num_rows <= 200:
@@ -199,8 +197,6 @@ class Beetle:
         #    row = [*packet_attr[9:12], *processed_gyro_data]
         #    self.csv_writer.writerow(row)
         #    self.num_rows += 1
-
-        self.enqueueData()
 
     def enqueueData(self):
         print(f"Current queue size: {self.queue.qsize()}")
@@ -223,12 +219,11 @@ class Beetle:
         print(f"Enqueued data: {self.packet_attr} - {device_dict[self.device_id]}")
 
     def sendHandshakeAck(self):
-        ack_packet_to_send = packetize.createPacket(TPacketType.PACKET_TYPE_ACK,
-                                                    self.ack_seqnum,
-                                                    self.player_id,
-                                                    self.device_id)
-        self.peripheral.writeCharacteristic(self.char_handle, val=ack_packet_to_send)
-
+        # ack_packet_to_send = packetize.createPacket(TPacketType.PACKET_TYPE_ACK,
+        #                                             self.ack_seqnum,
+        #                                             self.player_id,
+        #                                             self.device_id)
+        self.peripheral.writeCharacteristic(self.char_handle, val=bytes('A', 'utf-8'))
         # self.send_time = time.perf_counter()
 
     def sendNack(self):
@@ -237,7 +232,6 @@ class Beetle:
                                                      self.player_id,
                                                      self.device_id)
         self.peripheral.writeCharacteristic(self.char_handle, val=nack_packet_to_send)
-
         # self.send_time = time.perf_counter()
 
     def showThroughput(self):
