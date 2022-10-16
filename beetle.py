@@ -42,12 +42,10 @@ class Beetle:
         self.ack_seqnum = 0
         self.handshake_done = False
 
-        # attributes for state management and fragmentation
+        # attribute for handling fragmentation
         self.buffer = bytes(0)
-        self.current_buffer_length = 0
 
         # attribute for timeout
-        # self.send_time = 0
         self.receive_time = time.perf_counter()
 
         # for measuring throughput
@@ -107,6 +105,8 @@ class Beetle:
         self.start_time = 0
         self.end_time = 0
 
+        self.buffer = bytes(0)
+
         self.receive_time = 0
         self.handshake_done = False
 
@@ -127,16 +127,10 @@ class Beetle:
 
     def initiateHandshake(self):
         print(f"Sending Handshake to Beetle - {device_dict[self.device_id]}")
-
-        # handshake_packet_to_send = packetize.createPacket(TPacketType.PACKET_TYPE_HANDSHAKE,
-        #                                                   self.ack_seqnum,
-        #                                                   self.player_id,
-        #                                                   self.device_id)
         self.peripheral.writeCharacteristic(self.char_handle, val=bytes('H', 'utf-8'))
-        # self.send_time = time.perf_counter()
 
     def run(self):
-        # this is a trick to make sure no double handshake is sent upon turning off and on the Beetle
+        # this is to make sure no double handshake is sent upon turning off and on the Beetle
         if self.receive_time == 0:
             self.receive_time = time.perf_counter()
 
@@ -200,6 +194,7 @@ class Beetle:
 
     def enqueueData(self):
         print(f"Current queue size: {self.queue.qsize()}")
+
         # Don't enqueue unless all beetles are connected
         if not self.can_enqueue_data:
             print(f"Cannot enqueue because not all Beetles are connected - {device_dict[self.device_id]}")
@@ -207,32 +202,20 @@ class Beetle:
 
         # Don't enqueue if no shot was sent
         if self.device_id == EMITTER and not self.packet_attr[4]:
-            # print(f"Cannot enqueue because player did not send shot - {device_dict[self.device_id]}")
             return
 
         # Don't enqueue if no shot was received
         if self.device_id == RECEIVER and not self.packet_attr[5]:
-            # print(f"Cannot enqueue because player did not get shot - {device_dict[self.device_id]}")
             return
 
         self.queue.put(self.packet_attr)
         print(f"Enqueued data: {self.packet_attr} - {device_dict[self.device_id]}")
 
     def sendHandshakeAck(self):
-        # ack_packet_to_send = packetize.createPacket(TPacketType.PACKET_TYPE_ACK,
-        #                                             self.ack_seqnum,
-        #                                             self.player_id,
-        #                                             self.device_id)
         self.peripheral.writeCharacteristic(self.char_handle, val=bytes('A', 'utf-8'))
-        # self.send_time = time.perf_counter()
 
     def sendNack(self):
-        nack_packet_to_send = packetize.createPacket(TPacketType.PACKET_TYPE_NACK,
-                                                     self.ack_seqnum,
-                                                     self.player_id,
-                                                     self.device_id)
-        self.peripheral.writeCharacteristic(self.char_handle, val=nack_packet_to_send)
-        # self.send_time = time.perf_counter()
+        self.peripheral.writeCharacteristic(self.char_handle, val=bytes('N', 'utf-8'))
 
     def showThroughput(self):
         self.end_time = time.perf_counter()
