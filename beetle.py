@@ -4,7 +4,7 @@ import time
 from constants import TPacketType
 import packetize
 import csv
-from globals import num_currently_connected_beetles, TOTAL_BEETLES, device_dict, IMU, EMITTER, RECEIVER
+from globals import num_currently_connected_beetles, TOTAL_BEETLES, EMITTER, RECEIVER, mac_dict
 
 
 class BeetleDelegate(DefaultDelegate):
@@ -46,7 +46,7 @@ class Beetle:
         self.buffer = bytes(0)
 
         # attribute for timeout
-        self.receive_time = time.perf_counter()
+        self.receive_time = 0
 
         # for measuring throughput
         self.start_time = None
@@ -82,7 +82,7 @@ class Beetle:
         self.peripheral = Peripheral(self.mac_address)
 
         # the above line running indicates a successful connection to the Beetle
-        print(f"Connected successfully to Beetle - {device_dict[self.device_id]}")
+        print(f"Connected successfully to Beetle - {mac_dict[self.mac_address]}")
         num_currently_connected_beetles.value += 1
 
         # obtain GATT service and characteristic handle for Serial characteristic
@@ -116,17 +116,17 @@ class Beetle:
         num_currently_connected_beetles.value -= 1
 
     def reconnect(self):
-        print(f"Attempting to reconnect to Beetle - {device_dict[self.device_id]}")
+        print(f"Attempting to reconnect to Beetle - {mac_dict[self.mac_address]}")
         while True:
             try:
                 self.connect()
                 break
             except BTLEException as e:
-                print(e, "(Reconnecting...)")
+                print(f"Failed to reconnect, retrying - {mac_dict[self.mac_address]}")
                 continue
 
     def initiateHandshake(self):
-        print(f"Sending Handshake to Beetle - {device_dict[self.device_id]}")
+        print(f"Sending Handshake to Beetle - {mac_dict[self.mac_address]}")
         self.peripheral.writeCharacteristic(self.char_handle, val=bytes('H', 'utf-8'))
 
     def run(self):
@@ -137,7 +137,7 @@ class Beetle:
         # if laptop hasn't received data from Beetle in a while, try reset the Beetle
         if time.perf_counter() - self.receive_time > Beetle.TIMEOUT:
             self.handshake_done = False
-            print(f"Timeout, re-initiating handshake with Beetle - {device_dict[self.device_id]}")
+            print(f"Timeout, re-initiating handshake with Beetle - {mac_dict[self.mac_address]}")
             self.initiateHandshake()
 
         self.setCanEnqueue()
@@ -154,14 +154,14 @@ class Beetle:
 
     def handleData(self, data):
         # for debugging
-        # print(f'Raw bytes received from {device_dict[self.device_id]}:', data)
+        # print(f'Raw bytes received from {mac_dict[self.mac_address]}:', data)
 
         # drop corrupted packets
         if packetize.isInvalidPacket(data):
             return
 
         packet_attr = packetize.deserialize(data)
-        # print(f'Packet attributes: {packet_attr} - {device_dict[self.device_id]}')
+        print(f'Packet attributes: {packet_attr} - {mac_dict[self.mac_address]}')
         packet_type = packet_attr[0]
 
         if packet_type == TPacketType.PACKET_TYPE_DATA.value:
@@ -170,9 +170,9 @@ class Beetle:
 
             self.processData(packet_attr)
         elif packet_type == TPacketType.PACKET_TYPE_ACK.value and not self.handshake_done:
-            print(f"Received Ack from Beetle - {device_dict[self.device_id]}")
+            print(f"Received Ack from Beetle - {mac_dict[self.mac_address]}")
             self.sendHandshakeAck()
-            print(f"Three-way Handshake complete! Ready to receive data - {device_dict[self.device_id]}")
+            print(f"Three-way Handshake complete! Ready to receive data - {mac_dict[self.mac_address]}")
             self.handshake_done = True
 
     def processData(self, packet_attr):
@@ -197,7 +197,7 @@ class Beetle:
 
         # Don't enqueue unless all beetles are connected
         if not self.can_enqueue_data:
-            print(f"Cannot enqueue because not all Beetles are connected - {device_dict[self.device_id]}")
+            print(f"Cannot enqueue because not all Beetles are connected - {mac_dict[self.mac_address]}")
             return
 
         # Don't enqueue if no shot was sent
@@ -209,7 +209,7 @@ class Beetle:
             return
 
         self.queue.put(self.packet_attr)
-        print(f"Enqueued data: {self.packet_attr} - {device_dict[self.device_id]}")
+        print(f"Enqueued data: {self.packet_attr} - {mac_dict[self.mac_address]}")
 
     def sendHandshakeAck(self):
         self.peripheral.writeCharacteristic(self.char_handle, val=bytes('A', 'utf-8'))
@@ -223,7 +223,7 @@ class Beetle:
         throughput = self.num_packets_received / total_time
 
         print(f"Time elapsed:", "{:.2f},".format(total_time))
-        # print(f"Received {self.num_packets_received} packets - {device_dict[self.device_id]}")
-        # print(f"Dropped {self.num_packets_dropped} packets - {device_dict[self.device_id]}")
-        # print(f"{self.num_packets_fragmented} packets fragmented - {device_dict[self.device_id]}")
-        print(f"Throughput of Beetle - {device_dict[self.device_id]} =", "{:.3f}".format(throughput), "packets/s")
+        # print(f"Received {self.num_packets_received} packets - {mac_dict[self.mac_address]}")
+        # print(f"Dropped {self.num_packets_dropped} packets - {mac_dict[self.mac_address]}")
+        # print(f"{self.num_packets_fragmented} packets fragmented - {mac_dict[self.mac_address]}")
+        print(f"Throughput of Beetle - {mac_dict[self.mac_address]} =", "{:.3f}".format(throughput), "packets/s")
