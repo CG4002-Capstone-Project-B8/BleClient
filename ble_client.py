@@ -3,13 +3,8 @@ from beetle import Beetle, BeetleDelegate
 from concurrent.futures import ThreadPoolExecutor
 from multiprocessing import Queue, Process
 from ultra96_client import Ultra96Client
-from globals import num_currently_connected_beetles, device_dict
+from globals import num_currently_connected_beetles, BEETLE_ADDRESSES, mac_dict
 import time
-
-# get the MAC addresses here and separate them into player 1 and player 2
-# in the order: Player1 -> Player 2, IMU -> Emitter -> Receiver
-BEETLE_ADDRESSES = [["d0:39:72:bf:c3:d1", "d0:39:72:bf:cd:1e", "d0:39:72:bf:bd:d4"],
-                    ["c4:be:84:20:1a:0c"]]
 
 PLAYER_ONE = 0
 PLAYER_TWO = 1
@@ -17,20 +12,18 @@ PLAYER_TWO = 1
 PLAYER_ONE_BEETLES = BEETLE_ADDRESSES[0]
 PLAYER_TWO_BEETLES = BEETLE_ADDRESSES[1]
 
-TEST_BEETLES = ["c4:be:84:20:1a:0c", "d0:39:72:bf:cd:1e", "d0:39:72:bf:bd:d4"]
-
 
 def beetle_thread(beetle_address, player_id, device_id, player_queue):
     beetle = Beetle(beetle_address, player_id, device_id, player_queue)
     beetle.setDelegate(BeetleDelegate(beetle))
 
-    print(f"Connecting to Beetle - {device_dict[device_id]}")
+    print(f"Connecting to Beetle - {mac_dict[beetle_address]}")
     while True:
         try:
             beetle.connect()
             break
         except BTLEException as e:
-            print(f"Failed to connect - {device_dict[device_id]}, retrying")
+            print(f"Failed to connect - {mac_dict[beetle_address]}, retrying")
             time.sleep(1)
             continue
 
@@ -40,11 +33,11 @@ def beetle_thread(beetle_address, player_id, device_id, player_queue):
                 beetle.run()
                 print("Beetles currently connected: ", num_currently_connected_beetles.value)
         except BTLEException as e:
-            print(e, f'- {device_dict[device_id]}')
+            print(f'Device disconnected - {mac_dict[beetle_address]}')
             beetle.disconnect()
             beetle.reconnect()
         except KeyboardInterrupt as kbi:
-            print(f"Exiting - {device_dict[device_id]}")
+            print(f"Exiting - {mac_dict[beetle_address]}")
             beetle.disconnect()
             exit()
 
@@ -53,10 +46,7 @@ def player_process(player_id, player_beetle_addresses, player_queue):
     with ThreadPoolExecutor(max_workers=len(player_beetle_addresses)) as beetle_thread_executor:
         for i, beetle_address in enumerate(player_beetle_addresses):
             device_id = i + 1
-            if device_id == 3:
-                beetle_thread_executor.submit(beetle_thread, beetle_address, PLAYER_TWO, device_id, player_queue)
-            else:
-                beetle_thread_executor.submit(beetle_thread, beetle_address, player_id, device_id, player_queue)
+            beetle_thread_executor.submit(beetle_thread, beetle_address, player_id, device_id, player_queue)
 
 
 def client_process(player_one_queue, player_two_queue):
@@ -70,10 +60,14 @@ def main():
     p2_queue = Queue()
 
     p1 = Process(target=player_process, args=(PLAYER_ONE, PLAYER_ONE_BEETLES, p1_queue))
+    p2 = Process(target=player_process, args=(PLAYER_TWO, PLAYER_TWO_BEETLES, p2_queue))
     u96 = Process(target=client_process, args=(p1_queue, p2_queue))
 
     print("Starting process for Player 1")
     p1.start()
+
+    print("Starting process for Player 2")
+    p2.start()
 
     print("Starting process for Ultra96 Client")
     u96.start()
@@ -83,9 +77,9 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    # main()
 
-    # p1q = Queue()
+    p1q = Queue()
     # p2_queue = Queue()
 
     # with ProcessPoolExecutor(max_workers=1) as process_executor:
@@ -100,7 +94,7 @@ if __name__ == "__main__":
     # beetle_thread("c4:be:84:20:1a:0c", 0, 1, p1q)
 
     # beetle_thread("c4:be:84:20:1a:0c", 0, 1, PLAYER_ONE_QUEUE)
-    # beetle_thread("d0:39:72:bf:cd:1e", 0, 2, PLAYER_ONE_QUEUE)
-    # beetle_thread("d0:39:72:bf:c3:90", 0, 3, PLAYER_ONE_QUEUE)
+    beetle_thread("d0:39:72:bf:bf:f6", 0, 2, p1q)
+    # beetle_thread("d0:39:72:bf:c3:90", 1, 3, p1q)
     # player_process(PLAYER_ONE, PLAYER_ONE_BEETLES, p1q)
     # player_process(PLAYER_ONE, TEST_BEETLES, p1q)
