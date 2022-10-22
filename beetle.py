@@ -4,7 +4,7 @@ import time
 from constants import TPacketType
 import packetize
 import csv
-from globals import num_currently_connected_beetles, TOTAL_BEETLES, EMITTER, RECEIVER, mac_dict
+from globals import p1_connected_beetles, p2_connected_beetles, TOTAL_BEETLES, EMITTER, RECEIVER, mac_dict, PLAYER_ONE, PLAYER_TWO, NUM_BEETLES_PER_PLAYER
 
 
 class BeetleDelegate(DefaultDelegate):
@@ -56,6 +56,7 @@ class Beetle:
         # self.num_packets_fragmented = 0
 
         # for communication with Ultra 96
+        self.has_disconnected_before = False
         self.queue = player_queue
         self.can_enqueue_data = False
         self.packet_attr = None
@@ -75,7 +76,8 @@ class Beetle:
         self.peripheral.waitForNotifications(1.5)
 
     def setCanEnqueue(self):
-        self.can_enqueue_data = (num_currently_connected_beetles.value >= TOTAL_BEETLES)
+        total_num_beetles = p1_connected_beetles.value + p2_connected_beetles.value
+        self.can_enqueue_data = (total_num_beetles >= TOTAL_BEETLES)
 
     def connect(self):
         # initiate a connection to Beetle
@@ -83,7 +85,12 @@ class Beetle:
 
         # the above line running indicates a successful connection to the Beetle
         print(f"Connected successfully to Beetle - {mac_dict[self.mac_address]}")
-        num_currently_connected_beetles.value += 1
+        self.incrementPlayerBeetleCount()
+
+        # if all beetles for the player have been connected/reconnected, enqueue a connected packet
+        if self.allPlayerBeetlesConnected():
+            connected_tuple = (TPacketType.PACKET_TYPE_CONNECTED.value, 0, self.player_id, self.device_id, 0, 0, 0, 0, 0, 0.0, 0.0, 0.0, b'\x00')
+            self.queue.put(connected_tuple)
 
         # obtain GATT service and characteristic handle for Serial characteristic
         serial_service = self.peripheral.getServiceByUUID(Beetle.SERIAL_SERVICE_UUID)
@@ -112,8 +119,12 @@ class Beetle:
 
     def disconnect(self):
         self.resetAttributes()
+
+        disconnect_tuple = (TPacketType.PACKET_TYPE_DISCONNECTED.value, 0, self.player_id, self.device_id, 0, 0, 0, 0, 0, 0.0, 0.0, 0.0, b'\x00')
+        self.queue.put(disconnect_tuple)
+
         self.peripheral.disconnect()
-        num_currently_connected_beetles.value -= 1
+        self.decrementPlayerBeetleCount()
 
     def reconnect(self):
         print(f"Attempting to reconnect to Beetle - {mac_dict[self.mac_address]}")
@@ -216,6 +227,24 @@ class Beetle:
 
     def sendNack(self):
         self.peripheral.writeCharacteristic(self.char_handle, val=bytes('N', 'utf-8'))
+
+    def incrementPlayerBeetleCount(self):
+        if self.player_id == PLAYER_ONE:
+            p1_connected_beetles.value += 1
+        elif self.player_id == PLAYER_TWO:
+            p2_connected_beetles.value += 1
+
+    def decrementPlayerBeetleCount(self):
+        if self.player_id == PLAYER_ONE:
+            p1_connected_beetles.value -= 1
+        elif self.player_id == PLAYER_TWO:
+            p2_connected_beetles.value -= 1
+
+    def allPlayerBeetlesConnected(self):
+        if self.player_id == PLAYER_ONE:
+            return p1_connected_beetles.value == NUM_BEETLES_PER_PLAYER
+        elif self.player_id == PLAYER_TWO:
+            return p2_connected_beetles.value == NUM_BEETLES_PER_PLAYER
 
     def showThroughput(self):
         self.end_time = time.perf_counter()

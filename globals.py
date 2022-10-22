@@ -1,5 +1,8 @@
 from multiprocessing import Value
 
+PLAYER_ONE = 0
+PLAYER_TWO = 1
+
 # get the MAC addresses here and separate them into player 1 and player 2
 # in the order: Player1 -> Player 2, IMU -> Emitter -> Receiver
 BEETLE_ADDRESSES = [["d0:39:72:bf:c3:d1", "d0:39:72:bf:bf:f6", "d0:39:72:bf:c3:90"],
@@ -14,5 +17,8 @@ EMITTER = 2
 RECEIVER = 3
 device_dict = {IMU: 'IMU', EMITTER: 'Emitter', RECEIVER: 'Receiver'}
 
-num_currently_connected_beetles = Value('i', 0)
+p1_connected_beetles = Value('i', 0)
+p2_connected_beetles = Value('i', 0)
+
 TOTAL_BEETLES = 3
+NUM_BEETLES_PER_PLAYER = 3
