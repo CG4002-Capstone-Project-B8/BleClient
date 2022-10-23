@@ -8,7 +8,7 @@ from math import sqrt
 from relay_packet import RelayPacket
 
 MAGNITUDE_THRESHOLD = 1.5
-NUM_PACKETS = 80
+NUM_PACKETS = 50
 
 
 class Ultra96Client:
