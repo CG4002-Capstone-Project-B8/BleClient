@@ -1,4 +1,5 @@
 import struct
+from constants import TPacketType
 
 # device IDs
 IMU = 1
@@ -11,6 +12,8 @@ class RelayPacket:
     PLAYER_ID_SHIFT = 7
     SEND_SHOT_SHIFT = 6
     RECEIVE_SHOT_SHIFT = 5
+    DISCONNECT_SHIFT = 4
+    CONNECT_SHIFT = 3
 
     def __init__(self):
         self.details = 0
@@ -23,6 +26,14 @@ class RelayPacket:
     def extractBlePacketData(self, packet_attr):
         player_id = packet_attr[2]
         self.details |= (player_id << RelayPacket.PLAYER_ID_SHIFT)
+
+        packet_type = packet_attr[0]
+        if packet_type == TPacketType.PACKET_TYPE_DISCONNECTED.value:
+            self.details |= (1 << RelayPacket.DISCONNECT_SHIFT)
+            return
+        elif packet_type == TPacketType.PACKET_TYPE_CONNECTED.value:
+            self.details |= (1 << RelayPacket.CONNECT_SHIFT)
+            return
 
         device_id = packet_attr[3]
         if device_id == IMU:  # data from IMU

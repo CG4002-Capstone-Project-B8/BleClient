@@ -8,7 +8,7 @@ from math import sqrt
 from relay_packet import RelayPacket
 
 MAGNITUDE_THRESHOLD = 1.5
-NUM_PACKETS = 80
+NUM_PACKETS = 50
 
 
 class Ultra96Client:
@@ -48,6 +48,7 @@ class Ultra96Client:
         #    self.checkPlayerQueues()
 
     def tunnelToUltra96(self):
+        print('Opening SSH tunnel...')
         with sshtunnel.open_tunnel(
                 (Ultra96Client.TUNNEL_DOMAIN_NAME, Ultra96Client.TUNNEL_PORT_NUM),
                 ssh_username=self.sunfire_username,
@@ -55,12 +56,24 @@ class Ultra96Client:
                 local_bind_address=(self.data_client, self.data_client_port),  # the data sent from relay laptop to 127.0.0.1:8000 will be forwarded
                 remote_bind_address=(self.data_server, self.data_server_port)  # to the ultra96
         ) as sunfire_tunnel:
-            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-                print(f'Connecting to {self.data_client}:{self.data_client_port}')
-                s.connect((self.data_client, self.data_client_port))
-                print(f'Connected to {self.data_server}:{self.data_server_port}')
-                while True:
-                    self.checkPlayerQueues(s)
+            while True:  # reconnect when server shuts down
+                while True:  # reconnect until data_server is reachable
+                    sunfire_tunnel.check_tunnels()
+                    if not (False in sunfire_tunnel.tunnel_is_up.values()):
+                        break
+                    print(f'data_server is not reachable, retrying...')
+                    time.sleep(1)
+                    sunfire_tunnel.restart()
+
+                try:
+                    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+                        print(f'Connecting to {self.data_client}:{self.data_client_port}')
+                        s.connect((self.data_client, self.data_client_port))
+                        print(f'Connected to {self.data_server}:{self.data_server_port}')
+                        while True:
+                            self.checkPlayerQueues(s)
+                except BrokenPipeError:
+                    print('data_server closed connection. Trying to reconnect...')
 
     def checkPlayerQueues(self, sock):
         if not self.p1_queue.empty():

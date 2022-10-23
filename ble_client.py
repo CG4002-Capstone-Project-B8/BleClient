@@ -3,11 +3,8 @@ from beetle import Beetle, BeetleDelegate
 from concurrent.futures import ThreadPoolExecutor
 from multiprocessing import Queue, Process
 from ultra96_client import Ultra96Client
-from globals import num_currently_connected_beetles, BEETLE_ADDRESSES, mac_dict
+from globals import p1_connected_beetles, p2_connected_beetles, BEETLE_ADDRESSES, mac_dict, PLAYER_ONE, PLAYER_TWO
 import time
-
-PLAYER_ONE = 0
-PLAYER_TWO = 1
 
 PLAYER_ONE_BEETLES = BEETLE_ADDRESSES[0]
 PLAYER_TWO_BEETLES = BEETLE_ADDRESSES[1]
@@ -31,7 +28,7 @@ def beetle_thread(beetle_address, player_id, device_id, player_queue):
         try:
             while True:
                 beetle.run()
-                print("Beetles currently connected: ", num_currently_connected_beetles.value)
+                print("Beetles currently connected: ", p1_connected_beetles.value + p2_connected_beetles.value)
         except BTLEException as e:
             print(f'Device disconnected - {mac_dict[beetle_address]}')
             beetle.disconnect()
