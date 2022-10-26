@@ -20,5 +20,5 @@ device_dict = {IMU: 'IMU', EMITTER: 'Emitter', RECEIVER: 'Receiver'}
 p1_connected_beetles = Value('i', 0)
 p2_connected_beetles = Value('i', 0)
 
-TOTAL_BEETLES = 3
+TOTAL_BEETLES = 2
 NUM_BEETLES_PER_PLAYER = 3

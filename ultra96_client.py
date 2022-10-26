@@ -42,9 +42,11 @@ class Ultra96Client:
         self.p2_can_send = False
         self.p2_counter = 0
 
+        self.is_connected_to_ultra96 = False
+
     def run(self):
-        # self.tunnelToUltra96()
-        self.runInDebugMode()
+        self.tunnelToUltra96()
+        # self.runInDebugMode()
 
     def runInDebugMode(self):
         while True:
@@ -73,9 +75,11 @@ class Ultra96Client:
                         print(f'Connecting to {self.data_client}:{self.data_client_port}')
                         s.connect((self.data_client, self.data_client_port))
                         print(f'Connected to {self.data_server}:{self.data_server_port}')
+                        self.is_connected_to_ultra96 = True
                         while True:
                             self.checkPlayerQueues(s)
                 except BrokenPipeError:
+                    self.is_connected_to_ultra96 = False
                     print('data_server closed connection. Trying to reconnect...')
 
     def checkPlayerQueues(self, sock):
@@ -106,7 +110,7 @@ class Ultra96Client:
             p2_packet, p2_device_id = extractFromQueue(self.p2_queue)
 
             if p2_device_id == EMITTER or p2_device_id == RECEIVER:
-                sendPacket(sock, p2_packet)
+                sendPacket(sock, p2_packet, self.is_connected_to_ultra96)
                 return
 
             if not self.p2_can_send and p2_device_id == IMU:
@@ -117,7 +121,7 @@ class Ultra96Client:
                     self.p2_can_send = True
 
             if self.p2_can_send and self.p2_counter < NUM_PACKETS:
-                sendPacket(sock, p2_packet)
+                sendPacket(sock, p2_packet, self.is_connected_to_ultra96)
                 self.p2_counter += 1
                 if self.p2_counter >= NUM_PACKETS:
                     self.p2_can_send = False
@@ -144,7 +148,7 @@ def extractFromQueue(player_queue):
     return packet_to_send, device_id
 
 
-def sendPacket(sock, packet_to_send):
+def sendPacket(sock, packet_to_send, is_connected_to_ultra96):
     packet_bytes = packet_to_send.toBytes()
     packet_tuple = packet_to_send.toTuple()
 
@@ -155,10 +159,11 @@ def sendPacket(sock, packet_to_send):
     #     np.save('relay_imu_data', d)
     #     has_saved = True
 
-    sock.sendall(packet_bytes)
+    if is_connected_to_ultra96:
+        sock.sendall(packet_bytes)
 
-    print(f'ULTRA96_CLIENT: Packet sent to Ultra96: {packet_tuple}')
-    print(f'ULTRA96_CLIENT: Bytes sent to Ultra96 : {packet_bytes}\n')
+        print(f'ULTRA96_CLIENT: Packet sent to Ultra96: {packet_tuple}')
+        print(f'ULTRA96_CLIENT: Bytes sent to Ultra96 : {packet_bytes}\n')
 
 
 def printPacket(packet_to_send):
