@@ -148,6 +148,8 @@ class Beetle:
         # if laptop hasn't received data from Beetle in a while, try reset the Beetle
         if time.perf_counter() - self.receive_time > Beetle.TIMEOUT:
             self.handshake_done = False
+            self.buffer = bytes(0)
+
             print(f"Timeout, re-initiating handshake with Beetle - {mac_dict[self.mac_address]}")
             self.initiateHandshake()
 
