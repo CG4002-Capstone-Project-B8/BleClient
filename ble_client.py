@@ -74,9 +74,9 @@ def main():
 
 
 if __name__ == "__main__":
-    # main()
+    main()
 
-    p1q = Queue()
+    # p1q = Queue()
     # p2_queue = Queue()
 
     # with ProcessPoolExecutor(max_workers=1) as process_executor:
@@ -91,7 +91,7 @@ if __name__ == "__main__":
     # beetle_thread("c4:be:84:20:1a:0c", 0, 1, p1q)
 
     # beetle_thread("c4:be:84:20:1a:0c", 0, 1, PLAYER_ONE_QUEUE)
-    beetle_thread("d0:39:72:bf:bf:f6", 0, 2, p1q)
+    # beetle_thread("d0:39:72:bf:bf:f6", 0, 2, p1q)
     # beetle_thread("d0:39:72:bf:c3:90", 1, 3, p1q)
     # player_process(PLAYER_ONE, PLAYER_ONE_BEETLES, p1q)
     # player_process(PLAYER_ONE, TEST_BEETLES, p1q)

@@ -43,9 +43,12 @@ class Ultra96Client:
         self.p2_counter = 0
 
     def run(self):
-        self.tunnelToUltra96()
-        # while True:
-        #    self.checkPlayerQueues()
+        # self.tunnelToUltra96()
+        self.runInDebugMode()
+
+    def runInDebugMode(self):
+        while True:
+            self.debugQueues()
 
     def tunnelToUltra96(self):
         print('Opening SSH tunnel...')
@@ -120,6 +123,17 @@ class Ultra96Client:
                     self.p2_can_send = False
                     self.p2_counter = 0
 
+    def debugQueues(self):
+        if not self.p1_queue.empty():
+            print('ULTRA96_CLIENT: Player1 queue has data')
+            p1_packet, p1_device_id = extractFromQueue(self.p1_queue)
+            printPacket(p1_packet)
+
+        if not self.p2_queue.empty():
+            print('ULTRA96_CLIENT: Player2 queue has data')
+            p2_packet, p2_device_id = extractFromQueue(self.p2_queue)
+            printPacket(p2_packet)
+
 
 def extractFromQueue(player_queue):
     packet_to_send = RelayPacket()
@@ -145,6 +159,11 @@ def sendPacket(sock, packet_to_send):
 
     print(f'ULTRA96_CLIENT: Packet sent to Ultra96: {packet_tuple}')
     print(f'ULTRA96_CLIENT: Bytes sent to Ultra96 : {packet_bytes}\n')
+
+
+def printPacket(packet_to_send):
+    print(f'ULTRA96_CLIENT: Packet sent to Ultra96: {packet_to_send.toTuple()}')
+    print(f'ULTRA96_CLIENT: Bytes sent to Ultra96 : {packet_to_send.toBytes()}\n')
 
 
 def calculateAccelMagnitude(x, y, z):
