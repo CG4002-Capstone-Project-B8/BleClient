@@ -88,7 +88,7 @@ class Ultra96Client:
             p1_packet, p1_device_id = extractFromQueue(self.p1_queue)
 
             if p1_device_id == EMITTER or p1_device_id == RECEIVER:
-                sendPacket(sock, p1_packet)
+                sendPacket(sock, p1_packet, self.is_connected_to_ultra96)
                 return
 
             if not self.p1_can_send and p1_device_id == IMU:
@@ -99,7 +99,7 @@ class Ultra96Client:
                     self.p1_can_send = True
 
             if self.p1_can_send and self.p1_counter < NUM_PACKETS:
-                sendPacket(sock, p1_packet)
+                sendPacket(sock, p1_packet, self.is_connected_to_ultra96)
                 self.p1_counter += 1
                 if self.p1_counter >= NUM_PACKETS:
                     self.p1_can_send = False
