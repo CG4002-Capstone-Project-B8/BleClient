@@ -73,6 +73,7 @@ class Ultra96Client:
                         print(f'Connecting to {self.data_client}:{self.data_client_port}')
                         s.connect((self.data_client, self.data_client_port))
                         print(f'Connected to {self.data_server}:{self.data_server_port}')
+                        self.resetAttributes()
                         while True:
                             self.checkPlayerQueues(s)
                 except BrokenPipeError:
@@ -133,6 +134,18 @@ class Ultra96Client:
             print('ULTRA96_CLIENT: Player2 queue has data')
             p2_packet, p2_device_id = extractFromQueue(self.p2_queue)
             printPacket(p2_packet)
+
+    def resetAttributes(self):
+        while not self.p1_queue.empty():
+            self.p1_queue.get()
+
+        while not self.p2_queue.empty():
+            self.p2_queue.get()
+
+        self.p1_can_send = False
+        self.p1_counter = 0
+        self.p2_can_send = False
+        self.p2_counter = 0
 
 
 def extractFromQueue(player_queue):
