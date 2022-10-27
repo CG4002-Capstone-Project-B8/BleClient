@@ -71,7 +71,7 @@ class Ultra96Client:
                 try:
                     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
                         print(f'Connecting to {self.data_client}:{self.data_client_port}')
-                        #self.resetAttributes()
+                        self.resetAttributes()
                         s.connect((self.data_client, self.data_client_port))
                         print(f'Connected to {self.data_server}:{self.data_server_port}')
                         while True:
@@ -85,13 +85,13 @@ class Ultra96Client:
             p1_packet, p1_device_id = extractFromQueue(self.p1_queue)
 
             # check if disconnection packet
-            if p1_packet.details == b'\x10':
+            if (p1_packet.details & (1 << RelayPacket.DISCONNECT_SHIFT)) >> RelayPacket.DISCONNECT_SHIFT:
                 sendPacket(sock, p1_packet)
-                #self.resetAttributes(player_id=PLAYER_ONE)
+                self.resetAttributes(player_id=PLAYER_ONE)
                 return
 
             # send reconnection packet
-            if p1_packet.details == b'\x08':
+            if (p1_packet.details & (1 << RelayPacket.CONNECT_SHIFT)) >> RelayPacket.CONNECT_SHIFT:
                 sendPacket(sock, p1_packet)
                 return
 
@@ -119,18 +119,16 @@ class Ultra96Client:
         if not self.p2_queue.empty():
             # print('ULTRA96_CLIENT: Player2 queue has data')
             p2_packet, p2_device_id = extractFromQueue(self.p2_queue)
-            print(p2_packet.details)
+            # print(p2_packet.details)
 
             # check if disconnection packet
-            if p2_packet.details == b'\x90':
-                print("Disconnect\n")
+            if (p2_packet.details & (1 << RelayPacket.DISCONNECT_SHIFT)) >> RelayPacket.DISCONNECT_SHIFT:
                 sendPacket(sock, p2_packet)
-                #self.resetAttributes(player_id=PLAYER_TWO)
+                self.resetAttributes(player_id=PLAYER_TWO)
                 return
 
             # send connection packet
-            if p2_packet.details == b'\x88':
-                print("reconnected\n")
+            if (p2_packet.details & (1 << RelayPacket.CONNECT_SHIFT)) >> RelayPacket.CONNECT_SHIFT:
                 sendPacket(sock, p2_packet)
                 return
 
@@ -182,7 +180,6 @@ class Ultra96Client:
                 self.p2_queue.get()
             # while not self.p2_queue.empty():
             #     self.p2_queue.get()
-            
 
 
 def extractFromQueue(player_queue):
@@ -222,14 +219,16 @@ def calculateAccelMagnitude(x, y, z):
 
 if __name__ == '__main__':
     test_packet = RelayPacket()
-    test_packet.extractBlePacketData((5, 0, 1, 1, 0, 0, 0, 0, 0, 0.0, 0.0, 0.0, b'\x00'))
+    test_packet.extractBlePacketData((4, 0, 0, 2, 0, 0, 0, 0, 0, 0.0, 0.0, 0.0, b'\x00'))
+
+    print(test_packet.details)
 
     tp_bytes = test_packet.toBytes()
     tp_tuple = test_packet.toTuple()
 
-    if test_packet.details == b'\x10':
+    if (test_packet.details & (1 << 4)) >> 4:
         print('Player 1 beetle disconnected')
-    elif test_packet.details == b'\x90':
+    elif (test_packet.details & (1 << 3)) >> 3:
         print('Player 2 beetle disconnected')
     print(tp_bytes)
     print(tp_tuple)

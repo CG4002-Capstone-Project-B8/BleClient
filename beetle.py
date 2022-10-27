@@ -103,13 +103,8 @@ class Beetle:
         # if all beetles for the player have been connected/reconnected, enqueue a connected packet
         if self.allPlayerBeetlesConnected():
             # connected_tuple = (TPacketType.PACKET_TYPE_CONNECTED.value, 0, self.player_id, self.device_id, 0, 0, 0, 0, 0, 0.0, 0.0, 0.0, b'\x00')
-            connected_tuple = (TPacketType.PACKET_TYPE_CONNECTED.value, 0, self.player_id, 1, 0, 0, 0, 0, 0, 0.0, 0.0, 0.0, b'\x00')
-            print("Connected enqueue", connected_tuple)
-            self.queue.put(connected_tuple)
-
-        # if all beetles for the player have been connected/reconnected, enqueue a connected packet
-        if self.allPlayerBeetlesConnected():
             connected_tuple = (TPacketType.PACKET_TYPE_CONNECTED.value, 0, self.player_id, self.device_id, 0, 0, 0, 0, 0, 0.0, 0.0, 0.0, b'\x00')
+            print("Enqueue connected packet: ", connected_tuple)
             self.queue.put(connected_tuple)
 
     def resetAttributes(self):
@@ -128,8 +123,8 @@ class Beetle:
         self.resetAttributes()
 
         # disconnect_tuple = (TPacketType.PACKET_TYPE_DISCONNECTED.value, 0, self.player_id, self.device_id, 0, 0, 0, 0, 0, 0.0, 0.0, 0.0, b'\x00')
-        disconnect_tuple = (TPacketType.PACKET_TYPE_DISCONNECTED.value, 0, self.player_id, 1, 0, 0, 0, 0, 0, 0.0, 0.0, 0.0, b'\x00')
-        print("Enqueue disconnect", disconnect_tuple)
+        disconnect_tuple = (TPacketType.PACKET_TYPE_DISCONNECTED.value, 0, self.player_id, self.device_id, 0, 0, 0, 0, 0, 0.0, 0.0, 0.0, b'\x00')
+        print("Enqueued disconnect packet: ", disconnect_tuple)
         self.queue.put(disconnect_tuple)
 
         self.peripheral.disconnect()
