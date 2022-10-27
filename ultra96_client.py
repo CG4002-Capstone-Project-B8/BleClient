@@ -81,7 +81,7 @@ class Ultra96Client:
 
     def checkPlayerQueues(self, sock):
         if not self.p1_queue.empty():
-            print('ULTRA96_CLIENT: Player1 queue has data')
+            # print('ULTRA96_CLIENT: Player1 queue has data')
             p1_packet, p1_device_id = extractFromQueue(self.p1_queue)
 
             # check if disconnection packet
@@ -117,7 +117,7 @@ class Ultra96Client:
                     self.p1_counter = 0
 
         if not self.p2_queue.empty():
-            print('ULTRA96_CLIENT: Player2 queue has data')
+            # print('ULTRA96_CLIENT: Player2 queue has data')
             p2_packet, p2_device_id = extractFromQueue(self.p2_queue)
 
             # check if disconnection packet
@@ -198,8 +198,8 @@ def sendPacket(sock, packet_to_send):
 
     sock.sendall(packet_bytes)
 
-    print(f'ULTRA96_CLIENT: Packet sent to Ultra96: {packet_tuple}')
-    print(f'ULTRA96_CLIENT: Bytes sent to Ultra96 : {packet_bytes}\n')
+    print(f'ULTRA96_CLIENT: Packet sent to Ultra96: {packet_tuple}\n')
+    # print(f'ULTRA96_CLIENT: Bytes sent to Ultra96 : {packet_bytes}\n')
 
 
 def printPacket(packet_to_send):

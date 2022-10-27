@@ -137,7 +137,7 @@ class Beetle:
                 continue
 
     def initiateHandshake(self):
-        print(f"Sending Handshake to Beetle - {mac_dict[self.mac_address]}")
+        # print(f"Sending Handshake to Beetle - {mac_dict[self.mac_address]}")
         self.peripheral.writeCharacteristic(self.char_handle, val=bytes('H', 'utf-8'))
 
     def run(self):
@@ -174,7 +174,7 @@ class Beetle:
             return
 
         packet_attr = packetize.deserialize(data)
-        print(f'Packet attributes: {packet_attr} - {mac_dict[self.mac_address]}')
+        # print(f'Packet attributes: {packet_attr} - {mac_dict[self.mac_address]}')
         packet_type = packet_attr[0]
 
         if packet_type == TPacketType.PACKET_TYPE_DATA.value:
@@ -183,9 +183,9 @@ class Beetle:
 
             self.processData(packet_attr)
         elif packet_type == TPacketType.PACKET_TYPE_ACK.value and not self.handshake_done:
-            print(f"Received Ack from Beetle - {mac_dict[self.mac_address]}")
+            # print(f"Received Ack from Beetle - {mac_dict[self.mac_address]}")
             self.sendHandshakeAck()
-            print(f"Three-way Handshake complete! Ready to receive data - {mac_dict[self.mac_address]}")
+            # print(f"Three-way Handshake complete! Ready to receive data - {mac_dict[self.mac_address]}")
             self.handshake_done = True
 
     def processData(self, packet_attr):
@@ -206,11 +206,11 @@ class Beetle:
         #    self.num_rows += 1
 
     def enqueueData(self):
-        print(f"Current queue size: {self.queue.qsize()}")
+        # print(f"Current queue size: {self.queue.qsize()}")
 
         # Don't enqueue unless all beetles are connected
         if not self.can_enqueue_data:
-            print(f"Cannot enqueue because not all Beetles are connected - {mac_dict[self.mac_address]}")
+            # print(f"Cannot enqueue because not all Beetles are connected - {mac_dict[self.mac_address]}")
             return
 
         # Don't enqueue if no shot was sent
@@ -222,7 +222,7 @@ class Beetle:
             return
 
         self.queue.put(self.packet_attr)
-        print(f"Enqueued data: {self.packet_attr} - {mac_dict[self.mac_address]}")
+        # print(f"Enqueued data: {self.packet_attr} - {mac_dict[self.mac_address]}")
 
     def sendHandshakeAck(self):
         self.peripheral.writeCharacteristic(self.char_handle, val=bytes('A', 'utf-8'))
