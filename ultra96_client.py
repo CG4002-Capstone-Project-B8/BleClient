@@ -71,7 +71,7 @@ class Ultra96Client:
                 try:
                     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
                         print(f'Connecting to {self.data_client}:{self.data_client_port}')
-                        self.resetAttributes()
+                        #self.resetAttributes()
                         s.connect((self.data_client, self.data_client_port))
                         print(f'Connected to {self.data_server}:{self.data_server_port}')
                         while True:
@@ -87,7 +87,7 @@ class Ultra96Client:
             # check if disconnection packet
             if p1_packet.details == b'\x10':
                 sendPacket(sock, p1_packet)
-                self.resetAttributes(player_id=PLAYER_ONE)
+                #self.resetAttributes(player_id=PLAYER_ONE)
                 return
 
             # send reconnection packet
@@ -119,15 +119,18 @@ class Ultra96Client:
         if not self.p2_queue.empty():
             # print('ULTRA96_CLIENT: Player2 queue has data')
             p2_packet, p2_device_id = extractFromQueue(self.p2_queue)
+            print(p2_packet.details)
 
             # check if disconnection packet
             if p2_packet.details == b'\x90':
+                print("Disconnect\n")
                 sendPacket(sock, p2_packet)
-                self.resetAttributes(player_id=PLAYER_TWO)
+                #self.resetAttributes(player_id=PLAYER_TWO)
                 return
 
             # send connection packet
             if p2_packet.details == b'\x88':
+                print("reconnected\n")
                 sendPacket(sock, p2_packet)
                 return
 
@@ -165,15 +168,21 @@ class Ultra96Client:
 
     def resetAttributes(self, player_id='both'):
         if player_id == PLAYER_ONE or player_id == 'both':
-            while not self.p1_queue.empty():
+            self.p1_can_send = False
+            self.p1_counter = 0
+            size = self.p1_queue.qsize()
+            for _ in range(size):
                 self.p1_queue.get()
-                self.p1_can_send = False
-                self.p1_counter = 0
+            
         if player_id == PLAYER_TWO or player_id == 'both':
-            while not self.p2_queue.empty():
+            self.p2_can_send = False
+            self.p2_counter = 0
+            size = self.p2_queue.qsize()
+            for _ in range(size):
                 self.p2_queue.get()
-                self.p2_can_send = False
-                self.p2_counter = 0
+            # while not self.p2_queue.empty():
+            #     self.p2_queue.get()
+            
 
 
 def extractFromQueue(player_queue):

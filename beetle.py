@@ -86,11 +86,6 @@ class Beetle:
         # the above line running indicates a successful connection to the Beetle
         print(f"Connected successfully to Beetle - {mac_dict[self.mac_address]}")
 
-        # if all beetles for the player have been connected/reconnected, enqueue a connected packet
-        if self.allPlayerBeetlesConnected():
-            connected_tuple = (TPacketType.PACKET_TYPE_CONNECTED.value, 0, self.player_id, self.device_id, 0, 0, 0, 0, 0, 0.0, 0.0, 0.0, b'\x00')
-            self.queue.put(connected_tuple)
-
         # obtain GATT service and characteristic handle for Serial characteristic
         serial_service = self.peripheral.getServiceByUUID(Beetle.SERIAL_SERVICE_UUID)
         serial_char = serial_service.getCharacteristics(Beetle.SERIAL_CHAR_UUID)[0]
@@ -104,6 +99,13 @@ class Beetle:
         # start Three-way handshake
         self.initiateHandshake()
         self.incrementPlayerBeetleCount()
+        
+        # if all beetles for the player have been connected/reconnected, enqueue a connected packet
+        if self.allPlayerBeetlesConnected():
+            # connected_tuple = (TPacketType.PACKET_TYPE_CONNECTED.value, 0, self.player_id, self.device_id, 0, 0, 0, 0, 0, 0.0, 0.0, 0.0, b'\x00')
+            connected_tuple = (TPacketType.PACKET_TYPE_CONNECTED.value, 0, self.player_id, 1, 0, 0, 0, 0, 0, 0.0, 0.0, 0.0, b'\x00')
+            print("Connected enqueue", connected_tuple)
+            self.queue.put(connected_tuple)
 
     def resetAttributes(self):
         self.ack_seqnum = 0
@@ -120,7 +122,9 @@ class Beetle:
     def disconnect(self):
         self.resetAttributes()
 
-        disconnect_tuple = (TPacketType.PACKET_TYPE_DISCONNECTED.value, 0, self.player_id, self.device_id, 0, 0, 0, 0, 0, 0.0, 0.0, 0.0, b'\x00')
+        # disconnect_tuple = (TPacketType.PACKET_TYPE_DISCONNECTED.value, 0, self.player_id, self.device_id, 0, 0, 0, 0, 0, 0.0, 0.0, 0.0, b'\x00')
+        disconnect_tuple = (TPacketType.PACKET_TYPE_DISCONNECTED.value, 0, self.player_id, 1, 0, 0, 0, 0, 0, 0.0, 0.0, 0.0, b'\x00')
+        print("Enqueue disconnect", disconnect_tuple)
         self.queue.put(disconnect_tuple)
 
         self.peripheral.disconnect()
