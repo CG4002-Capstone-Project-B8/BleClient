@@ -85,7 +85,6 @@ class Beetle:
 
         # the above line running indicates a successful connection to the Beetle
         print(f"Connected successfully to Beetle - {mac_dict[self.mac_address]}")
-        self.incrementPlayerBeetleCount()
 
         # if all beetles for the player have been connected/reconnected, enqueue a connected packet
         if self.allPlayerBeetlesConnected():
@@ -104,6 +103,7 @@ class Beetle:
 
         # start Three-way handshake
         self.initiateHandshake()
+        self.incrementPlayerBeetleCount()
 
     def resetAttributes(self):
         self.ack_seqnum = 0
@@ -148,7 +148,7 @@ class Beetle:
         # if laptop hasn't received data from Beetle in a while, try reset the Beetle
         if time.perf_counter() - self.receive_time > Beetle.TIMEOUT:
             self.handshake_done = False
-            self.buffer = bytes(0)
+            # self.buffer = bytes(0)
 
             print(f"Timeout, re-initiating handshake with Beetle - {mac_dict[self.mac_address]}")
             self.initiateHandshake()

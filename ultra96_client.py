@@ -3,7 +3,7 @@ import sshtunnel
 import os
 import socket
 import time
-from globals import IMU, EMITTER, RECEIVER
+from globals import IMU, EMITTER, RECEIVER, PLAYER_ONE, PLAYER_TWO
 from math import sqrt
 from relay_packet import RelayPacket
 
@@ -71,9 +71,9 @@ class Ultra96Client:
                 try:
                     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
                         print(f'Connecting to {self.data_client}:{self.data_client_port}')
+                        self.resetAttributes()
                         s.connect((self.data_client, self.data_client_port))
                         print(f'Connected to {self.data_server}:{self.data_server_port}')
-                        self.resetAttributes()
                         while True:
                             self.checkPlayerQueues(s)
                 except BrokenPipeError:
@@ -84,10 +84,18 @@ class Ultra96Client:
             print('ULTRA96_CLIENT: Player1 queue has data')
             p1_packet, p1_device_id = extractFromQueue(self.p1_queue)
 
+            # check if disconnection packet
+            if p1_packet.details == b'\x10':
+                sendPacket(sock, p1_packet)
+                self.resetAttributes(player_id=PLAYER_ONE)
+                return
+
+            # send any packet involved in shooting
             if p1_device_id == EMITTER or p1_device_id == RECEIVER:
                 sendPacket(sock, p1_packet)
                 return
 
+            # check IMU data for magnitude of acceleration
             if not self.p1_can_send and p1_device_id == IMU:
                 accel_x, accel_y, accel_z = p1_packet.accel_data
                 accel_magnitude = calculateAccelMagnitude(accel_x, accel_y, accel_z)
@@ -95,6 +103,7 @@ class Ultra96Client:
                 if accel_magnitude > MAGNITUDE_THRESHOLD:
                     self.p1_can_send = True
 
+            # send the next NUM_PACKETS packets to be processed as fix-sized frames by Hardware AI
             if self.p1_can_send and self.p1_counter < NUM_PACKETS:
                 sendPacket(sock, p1_packet)
                 self.p1_counter += 1
@@ -106,10 +115,18 @@ class Ultra96Client:
             print('ULTRA96_CLIENT: Player2 queue has data')
             p2_packet, p2_device_id = extractFromQueue(self.p2_queue)
 
+            # check if disconnection packet
+            if p2_packet.details == b'\x90':
+                sendPacket(sock, p2_packet)
+                self.resetAttributes(player_id=PLAYER_TWO)
+                return
+
+            # send any packet involved in shooting
             if p2_device_id == EMITTER or p2_device_id == RECEIVER:
                 sendPacket(sock, p2_packet)
                 return
 
+            # check IMU data for magnitude of acceleration
             if not self.p2_can_send and p2_device_id == IMU:
                 accel_x, accel_y, accel_z = p2_packet.accel_data
                 accel_magnitude = calculateAccelMagnitude(accel_x, accel_y, accel_z)
@@ -117,6 +134,7 @@ class Ultra96Client:
                 if accel_magnitude > MAGNITUDE_THRESHOLD:
                     self.p2_can_send = True
 
+            # send the next NUM_PACKETS packets to be processed as fix-sized frames by Hardware AI
             if self.p2_can_send and self.p2_counter < NUM_PACKETS:
                 sendPacket(sock, p2_packet)
                 self.p2_counter += 1
@@ -135,17 +153,17 @@ class Ultra96Client:
             p2_packet, p2_device_id = extractFromQueue(self.p2_queue)
             printPacket(p2_packet)
 
-    def resetAttributes(self):
-        while not self.p1_queue.empty():
-            self.p1_queue.get()
-
-        while not self.p2_queue.empty():
-            self.p2_queue.get()
-
-        self.p1_can_send = False
-        self.p1_counter = 0
-        self.p2_can_send = False
-        self.p2_counter = 0
+    def resetAttributes(self, player_id='both'):
+        if player_id == PLAYER_ONE or player_id == 'both':
+            while not self.p1_queue.empty():
+                self.p1_queue.get()
+                self.p1_can_send = False
+                self.p1_counter = 0
+        if player_id == PLAYER_TWO or player_id == 'both':
+            while not self.p2_queue.empty():
+                self.p2_queue.get()
+                self.p2_can_send = False
+                self.p2_counter = 0
 
 
 def extractFromQueue(player_queue):
@@ -181,3 +199,18 @@ def printPacket(packet_to_send):
 
 def calculateAccelMagnitude(x, y, z):
     return sqrt((x * x) + (y * y) + (z * z))
+
+
+if __name__ == '__main__':
+    test_packet = RelayPacket()
+    test_packet.extractBlePacketData((4, 0, 0, 2, 0, 0, 0, 0, 0, 0.0, 0.0, 0.0, b'\x00'))
+
+    tp_bytes = test_packet.toBytes()
+    tp_tuple = test_packet.toTuple()
+
+    if test_packet.details == b'\x10':
+        print('Player 1 beetle disconnected')
+    elif test_packet.details == b'\x90':
+        print('Player 2 beetle disconnected')
+    print(tp_bytes)
+    print(tp_tuple)
