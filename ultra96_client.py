@@ -213,7 +213,7 @@ def calculateAccelMagnitude(x, y, z):
 
 if __name__ == '__main__':
     test_packet = RelayPacket()
-    test_packet.extractBlePacketData((5, 0, 0, 1, 0, 0, 0, 0, 0, 0.0, 0.0, 0.0, b'\x00'))
+    test_packet.extractBlePacketData((5, 0, 1, 1, 0, 0, 0, 0, 0, 0.0, 0.0, 0.0, b'\x00'))
 
     tp_bytes = test_packet.toBytes()
     tp_tuple = test_packet.toTuple()
