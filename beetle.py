@@ -150,8 +150,8 @@ class Beetle:
             self.handshake_done = False
             # self.buffer = bytes(0)
 
-            print(f"Timeout, re-initiating handshake with Beetle - {mac_dict[self.mac_address]}")
-            self.initiateHandshake()
+            print(f"Timeout, reconnecting to Beetle - {mac_dict[self.mac_address]}")
+            raise BTLEException
 
         self.setCanEnqueue()
         self.waitForNotifications()

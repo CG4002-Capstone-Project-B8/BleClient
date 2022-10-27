@@ -90,6 +90,11 @@ class Ultra96Client:
                 self.resetAttributes(player_id=PLAYER_ONE)
                 return
 
+            # send reconnection packet
+            if p1_packet.details == b'\x08':
+                sendPacket(sock, p1_packet)
+                return
+
             # send any packet involved in shooting
             if p1_device_id == EMITTER or p1_device_id == RECEIVER:
                 sendPacket(sock, p1_packet)
@@ -119,6 +124,11 @@ class Ultra96Client:
             if p2_packet.details == b'\x90':
                 sendPacket(sock, p2_packet)
                 self.resetAttributes(player_id=PLAYER_TWO)
+                return
+
+            # send connection packet
+            if p2_packet.details == b'\x88':
+                sendPacket(sock, p2_packet)
                 return
 
             # send any packet involved in shooting
@@ -203,7 +213,7 @@ def calculateAccelMagnitude(x, y, z):
 
 if __name__ == '__main__':
     test_packet = RelayPacket()
-    test_packet.extractBlePacketData((4, 0, 0, 2, 0, 0, 0, 0, 0, 0.0, 0.0, 0.0, b'\x00'))
+    test_packet.extractBlePacketData((5, 0, 0, 1, 0, 0, 0, 0, 0, 0.0, 0.0, 0.0, b'\x00'))
 
     tp_bytes = test_packet.toBytes()
     tp_tuple = test_packet.toTuple()
