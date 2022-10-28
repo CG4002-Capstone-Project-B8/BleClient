@@ -154,7 +154,7 @@ class Beetle:
             self.handshake_done = False
             # self.buffer = bytes(0)
 
-            print(f"Timeout, reconnecting to Beetle - {mac_dict[self.mac_address]}")
+            print(f"Timeout encountered - {mac_dict[self.mac_address]}")
             raise BTLEException
 
         self.setCanEnqueue()

@@ -28,9 +28,9 @@ def beetle_thread(beetle_address, player_id, device_id, player_queue):
         try:
             while True:
                 beetle.run()
-                print("Beetles currently connected: ", p1_connected_beetles.value + p2_connected_beetles.value)
+                print(f'Player 1: {p1_connected_beetles.value} , Player 2: {p2_connected_beetles.value}')
         except BTLEException as e:
-            print(f'Device disconnected - {mac_dict[beetle_address]}')
+            print(f'Beetle disconnected - {mac_dict[beetle_address]}')
             beetle.disconnect()
             beetle.reconnect()
         except KeyboardInterrupt as kbi:
@@ -70,6 +70,7 @@ def main():
     u96.start()
 
     p1.join()
+    p2.join()
     u96.join()
 
 
