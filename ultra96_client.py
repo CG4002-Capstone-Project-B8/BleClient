@@ -4,6 +4,7 @@ import os
 import socket
 import time
 from globals import IMU, EMITTER, RECEIVER, PLAYER_ONE, PLAYER_TWO
+from constants import TPacketType
 from math import sqrt
 from relay_packet import RelayPacket
 
@@ -31,12 +32,13 @@ class Ultra96Client:
         self.data_client = os.environ.get('DATA_CLIENT')
         self.data_client_port = int(os.environ.get('DATA_CLIENT_PORT'))
 
+        # for checking connection to data server
+        self.is_connected_to_server = False
+
         # initialize data queues
         self.p1_queue = player_one_queue
         self.p2_queue = player_two_queue
 
-        # configure log files
-        # logging.basicConfig(filename="ultra96_logs.txt", level=logging.INFO, filemode="w", format="%(message)s")
         self.p1_can_send = False
         self.p1_counter = 0
         self.p2_can_send = False
@@ -74,9 +76,11 @@ class Ultra96Client:
                         self.resetAttributes()
                         s.connect((self.data_client, self.data_client_port))
                         print(f'Connected to {self.data_server}:{self.data_server_port}')
+                        self.is_connected_to_server = True
                         while True:
                             self.checkPlayerQueues(s)
                 except BrokenPipeError:
+                    self.is_connected_to_server = False
                     print('data_server closed connection. Trying to reconnect...')
 
     def checkPlayerQueues(self, sock):
@@ -152,6 +156,18 @@ class Ultra96Client:
                 if self.p2_counter >= NUM_PACKETS:
                     self.p2_can_send = False
                     self.p2_counter = 0
+
+    def extractFromQueue(self, player_queue):
+        packet_to_send = RelayPacket()
+        ble_packet_attr = player_queue.get()
+
+        # this re-enqueues the packet for connection if all beetles have connected but the client has not connected to the server
+        if ble_packet_attr[0] == TPacketType.PACKET_TYPE_CONNECTED.value and not self.is_connected_to_server:
+            player_queue.put(ble_packet_attr)
+
+        device_id = ble_packet_attr[3]
+        packet_to_send.extractBlePacketData(ble_packet_attr)
+        return packet_to_send, device_id
 
     def debugQueues(self):
         if not self.p1_queue.empty():
