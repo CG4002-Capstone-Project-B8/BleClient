@@ -86,7 +86,7 @@ class Ultra96Client:
     def checkPlayerQueues(self, sock):
         if not self.p1_queue.empty():
             # print('ULTRA96_CLIENT: Player1 queue has data')
-            p1_packet, p1_device_id = extractFromQueue(self.p1_queue)
+            p1_packet, p1_device_id = self.extractFromQueue(self.p1_queue)
 
             # check if disconnection packet
             if (p1_packet.details & (1 << RelayPacket.DISCONNECT_SHIFT)) >> RelayPacket.DISCONNECT_SHIFT:
@@ -122,7 +122,7 @@ class Ultra96Client:
 
         if not self.p2_queue.empty():
             # print('ULTRA96_CLIENT: Player2 queue has data')
-            p2_packet, p2_device_id = extractFromQueue(self.p2_queue)
+            p2_packet, p2_device_id = self.extractFromQueue(self.p2_queue)
             # print(p2_packet.details)
 
             # check if disconnection packet
@@ -172,12 +172,12 @@ class Ultra96Client:
     def debugQueues(self):
         if not self.p1_queue.empty():
             print('ULTRA96_CLIENT: Player1 queue has data')
-            p1_packet, p1_device_id = extractFromQueue(self.p1_queue)
+            p1_packet, p1_device_id = self.extractFromQueue(self.p1_queue)
             printPacket(p1_packet)
 
         if not self.p2_queue.empty():
             print('ULTRA96_CLIENT: Player2 queue has data')
-            p2_packet, p2_device_id = extractFromQueue(self.p2_queue)
+            p2_packet, p2_device_id = self.extractFromQueue(self.p2_queue)
             printPacket(p2_packet)
 
     def resetAttributes(self, player_id='both'):
@@ -196,15 +196,6 @@ class Ultra96Client:
                 self.p2_queue.get()
             # while not self.p2_queue.empty():
             #     self.p2_queue.get()
-
-
-def extractFromQueue(player_queue):
-    packet_to_send = RelayPacket()
-    ble_packet_attr = player_queue.get()
-
-    device_id = ble_packet_attr[3]
-    packet_to_send.extractBlePacketData(ble_packet_attr)
-    return packet_to_send, device_id
 
 
 def sendPacket(sock, packet_to_send):
