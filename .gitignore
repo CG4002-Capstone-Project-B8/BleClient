@@ -1,1 +1,4 @@
 .env
+imu*.csv
+__pycache__/
+.gitignore
