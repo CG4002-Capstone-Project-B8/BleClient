@@ -3,7 +3,7 @@ import sshtunnel
 import os
 import socket
 import time
-from globals import IMU, EMITTER, RECEIVER, PLAYER_ONE, PLAYER_TWO
+from globals import IMU, EMITTER, RECEIVER, PLAYER_ONE, PLAYER_TWO, is_connected_to_u96
 from math import sqrt
 from relay_packet import RelayPacket
 
@@ -74,10 +74,12 @@ class Ultra96Client:
                         self.resetAttributes()
                         s.connect((self.data_client, self.data_client_port))
                         print(f'Connected to {self.data_server}:{self.data_server_port}')
+                        is_connected_to_u96.value = 1
                         while True:
                             self.checkPlayerQueues(s)
                 except BrokenPipeError:
                     print('data_server closed connection. Trying to reconnect...')
+                    is_connected_to_u96.value = 0
 
     def checkPlayerQueues(self, sock):
         if not self.p1_queue.empty():

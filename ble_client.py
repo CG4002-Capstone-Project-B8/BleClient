@@ -3,7 +3,7 @@ from beetle import Beetle, BeetleDelegate
 from concurrent.futures import ThreadPoolExecutor
 from multiprocessing import Queue, Process
 from ultra96_client import Ultra96Client
-from globals import p1_connected_beetles, p2_connected_beetles, BEETLE_ADDRESSES, mac_dict, PLAYER_ONE, PLAYER_TWO
+from globals import p1_connected_beetles, p2_connected_beetles, BEETLE_ADDRESSES, mac_dict, PLAYER_ONE, PLAYER_TWO, is_connected_to_u96
 import time
 
 PLAYER_ONE_BEETLES = BEETLE_ADDRESSES[0]
@@ -60,14 +60,16 @@ def main():
     p2 = Process(target=player_process, args=(PLAYER_TWO, PLAYER_TWO_BEETLES, p2_queue))
     u96 = Process(target=client_process, args=(p1_queue, p2_queue))
 
+    print("Starting process for Ultra96 Client")
+    u96.start()
+    while not is_connected_to_u96.value:
+        time.sleep(0.5)
+
     print("Starting process for Player 1")
     p1.start()
 
     print("Starting process for Player 2")
     p2.start()
-
-    print("Starting process for Ultra96 Client")
-    u96.start()
 
     p1.join()
     p2.join()
