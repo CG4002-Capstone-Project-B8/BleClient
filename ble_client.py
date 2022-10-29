@@ -28,7 +28,7 @@ def beetle_thread(beetle_address, player_id, device_id, player_queue):
         try:
             while True:
                 beetle.run()
-                print(f'Player 1: {p1_connected_beetles.value} , Player 2: {p2_connected_beetles.value}')
+                print(f'P1: {p1_connected_beetles.value} beetles , P2: {p2_connected_beetles.value} beetles')
         except BTLEException as e:
             print(f'Beetle disconnected - {mac_dict[beetle_address]}')
             beetle.disconnect()
