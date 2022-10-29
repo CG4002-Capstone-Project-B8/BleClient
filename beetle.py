@@ -155,7 +155,7 @@ class Beetle:
             # self.buffer = bytes(0)
 
             print(f"Timeout encountered - {mac_dict[self.mac_address]}")
-            raise BTLEException
+            raise BTLEException("Timeout")
 
         self.setCanEnqueue()
         self.waitForNotifications()

@@ -36,7 +36,7 @@ def beetle_thread(beetle_address, player_id, device_id, player_queue):
         except KeyboardInterrupt as kbi:
             print(f"Exiting - {mac_dict[beetle_address]}")
             beetle.disconnect()
-            exit()
+            exit()           
 
 
 def player_process(player_id, player_beetle_addresses, player_queue):
