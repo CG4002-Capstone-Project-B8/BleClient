@@ -2,3 +2,4 @@
 imu*.csv
 __pycache__/
 .gitignore
+ai/

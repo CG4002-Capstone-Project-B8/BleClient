@@ -62,6 +62,8 @@ def main():
 
     print("Starting process for Ultra96 Client")
     u96.start()
+
+    # don't connect to the Beetles until connection to the Ultra96 server is successful
     while not is_connected_to_u96.value:
         time.sleep(0.5)
 
@@ -71,9 +73,9 @@ def main():
     print("Starting process for Player 2")
     p2.start()
 
+    u96.join()
     p1.join()
     p2.join()
-    u96.join()
 
 
 if __name__ == "__main__":
