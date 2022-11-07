@@ -1,14 +1,14 @@
-## Overview
+# Overview
 This is the Internal Comms component which communicates with the Beetles via BLE, collects and sends Beetle sensor data to the Ultra96.
 
-## Setup 
+# Setup 
 
-### Beetles Setup
+## Beetles Setup
 Visit the following [link](https://wiki.dfrobot.com/DFRobot_Bluetooth_4.1__BLE__User_Guide#target_0) to configure BLE specifications on the Beetle (requires Arduino IDE), and obtain the MAC address of each Beetle via AT commands.
 
 Once the MAC address of each Beetle is obtained, open `globals.py` and edit the `BEETLE_ADDRESSES`  variable accordingly. Refer to the `mac_dict` variable to correctly match the Beetles to their respective MAC addresses.
 
-### Bluetooth Setup on Laptop
+## Bluetooth Setup on Laptop
 1. Clone this repository to your relay laptop running on a Linux operating system. Note that the `bluepy` Python package used for BLE communication is only compatible with Linux.
 
 2. Ensure Python (version 3.0 or higher) is installed on the laptop. 
@@ -39,13 +39,13 @@ Once the MAC address of each Beetle is obtained, open `globals.py` and edit the 
     sudo hciconfig hciX up
     ```
 
-### Installing Dependencies
+## Installing Dependencies
 Install the remaining dependencies required for SSH tunnelling to the Ultra96.
 ```
 pip install -r requirements.txt
 ```
 
-### Creating `.env` file
+## Creating `.env` file
 Create a `.env` file in the current working directory. The file content should be as follows (The values in `<>` are to be replaced with your own values):
 
 ```
@@ -59,7 +59,7 @@ DATA_CLIENT="localhost"
 DATA_CLIENT_PORT=10000
 ```
 
-## Running the BLE CLient
+# Running the BLE CLient
 ```
 python3 ble_client.py
 ```
