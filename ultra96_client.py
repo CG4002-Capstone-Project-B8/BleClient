@@ -124,7 +124,7 @@ class Ultra96Client:
             # print(p2_packet.details)
 
             # check if disconnection packet
-            if (p2_packet.details & (1 << RelayPacket.DISCONNECT_SHIFT)) >> RelayPacket.DISCONNECT_SHIFT:
+            if (p2_packet.details & (1 << RelayPacket.DISCONNECT_SHIFT)) >> RelayPacket.DISCONNECT_SHIFT and p2_device_id == IMU:
                 sendPacket(sock, p2_packet)
                 self.resetAttributes(player_id=PLAYER_TWO)
                 return
