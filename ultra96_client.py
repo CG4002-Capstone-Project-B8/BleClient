@@ -13,7 +13,7 @@ NUM_PACKETS = 50
 
 class Ultra96Client:
 
-    TUNNEL_DOMAIN_NAME = 'stu.comp.nus.edu.sg'
+    TUNNEL_DOMAIN_NAME = 'sunfire.comp.nus.edu.sg'
     TUNNEL_PORT_NUM = 22
 
     def __init__(self, player_one_queue, player_two_queue):
@@ -61,7 +61,7 @@ class Ultra96Client:
         ) as sunfire_tunnel:
             while True:  # reconnect when server shuts down
                 while True:  # reconnect until data_server is reachable
-                    sunfire_tunnel.check_tunnels()
+                    sunfire_tunnel.check_tunnels()                    
                     if not (False in sunfire_tunnel.tunnel_is_up.values()):
                         break
                     print(f'data_server is not reachable, retrying...')
