@@ -87,9 +87,10 @@ class Ultra96Client:
             p1_packet, p1_device_id = extractFromQueue(self.p1_queue)
 
             # check if disconnection packet
-            if (p1_packet.details & (1 << RelayPacket.DISCONNECT_SHIFT)) >> RelayPacket.DISCONNECT_SHIFT and p1_device_id == IMU:
+            if (p1_packet.details & (1 << RelayPacket.DISCONNECT_SHIFT)) >> RelayPacket.DISCONNECT_SHIFT:
                 sendPacket(sock, p1_packet)
-                self.resetAttributes(player_id=PLAYER_ONE)
+                if p1_device_id == IMU:
+                    self.resetAttributes(player_id=PLAYER_ONE)
                 return
 
             # send reconnection packet
@@ -124,9 +125,10 @@ class Ultra96Client:
             # print(p2_packet.details)
 
             # check if disconnection packet
-            if (p2_packet.details & (1 << RelayPacket.DISCONNECT_SHIFT)) >> RelayPacket.DISCONNECT_SHIFT and p2_device_id == IMU:
+            if (p2_packet.details & (1 << RelayPacket.DISCONNECT_SHIFT)) >> RelayPacket.DISCONNECT_SHIFT:
                 sendPacket(sock, p2_packet)
-                self.resetAttributes(player_id=PLAYER_TWO)
+                if p2_device_id == IMU:
+                    self.resetAttributes(player_id=PLAYER_TWO)
                 return
 
             # send connection packet
