@@ -175,10 +175,14 @@ class Beetle:
 
         # drop corrupted packets
         if packetize.isInvalidPacket(data):
+            print(f'Invalid packet - {mac_dict[self.mac_address]}')
             return
 
         packet_attr = packetize.deserialize(data)
-        # print(f'Packet attributes: {packet_attr} - {mac_dict[self.mac_address]}')
+
+        # if self.player_id == 1 and self.device_id == 1:
+        #     print(f'Packet attributes: {packet_attr} - {mac_dict[self.mac_address]}')
+            
         packet_type = packet_attr[0]
 
         if packet_type == TPacketType.PACKET_TYPE_DATA.value:
