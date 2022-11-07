@@ -217,9 +217,8 @@ class Beetle:
         # print(f"Current queue size: {self.queue.qsize()}")
 
         # Don't enqueue unless all beetles are connected
-        if not self.can_enqueue_data:
-            # print(f"Cannot enqueue because not all Beetles are connected - {mac_dict[self.mac_address]}")
-            return
+        # if not self.can_enqueue_data:
+        #     return
 
         # Don't enqueue if no shot was sent
         if self.device_id == EMITTER and not self.packet_attr[4]:
