@@ -49,8 +49,8 @@ pip install -r requirements.txt
 Create a `.env` file in the current working directory. The file content should be as follows (The values in `<>` are to be replaced with your own values):
 
 ```
-SUNFIRE_USERNAME=<username>
-SUNFIRE_PASSWD=<password>
+STU_USERNAME=<username>
+STU_PASSWD=<password>
 
 DATA_SERVER="192.168.95.250"
 DATA_SERVER_PORT=10000
