@@ -1,6 +1,5 @@
 from enum import Enum
 
-
 class TPacketType(Enum):
     PACKET_TYPE_HANDSHAKE = 0
     PACKET_TYPE_ACK = 1
@@ -8,4 +7,3 @@ class TPacketType(Enum):
     PACKET_TYPE_DATA = 3
     PACKET_TYPE_DISCONNECTED = 4
     PACKET_TYPE_CONNECTED = 5
-

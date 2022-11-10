@@ -13,7 +13,7 @@ NUM_PACKETS = 50
 
 class Ultra96Client:
 
-    TUNNEL_DOMAIN_NAME = 'sunfire.comp.nus.edu.sg'
+    TUNNEL_DOMAIN_NAME = 'stu.comp.nus.edu.sg'
     TUNNEL_PORT_NUM = 22
 
     def __init__(self, player_one_queue, player_two_queue):
@@ -35,8 +35,7 @@ class Ultra96Client:
         self.p1_queue = player_one_queue
         self.p2_queue = player_two_queue
 
-        # configure log files
-        # logging.basicConfig(filename="ultra96_logs.txt", level=logging.INFO, filemode="w", format="%(message)s")
+        # configure state variables for IMU window
         self.p1_can_send = False
         self.p1_counter = 0
         self.p2_can_send = False
@@ -83,7 +82,6 @@ class Ultra96Client:
 
     def checkPlayerQueues(self, sock):
         if not self.p1_queue.empty():
-            # print('ULTRA96_CLIENT: Player1 queue has data')
             p1_packet, p1_device_id = extractFromQueue(self.p1_queue)
 
             # check if disconnection packet
@@ -120,9 +118,7 @@ class Ultra96Client:
                     self.p1_counter = 0
 
         if not self.p2_queue.empty():
-            # print('ULTRA96_CLIENT: Player2 queue has data')
             p2_packet, p2_device_id = extractFromQueue(self.p2_queue)
-            # print(p2_packet.details)
 
             # check if disconnection packet
             if (p2_packet.details & (1 << RelayPacket.DISCONNECT_SHIFT)) >> RelayPacket.DISCONNECT_SHIFT:
@@ -182,8 +178,6 @@ class Ultra96Client:
             size = self.p2_queue.qsize()
             for _ in range(size):
                 self.p2_queue.get()
-            # while not self.p2_queue.empty():
-            #     self.p2_queue.get()
 
 
 def extractFromQueue(player_queue):
@@ -202,7 +196,6 @@ def sendPacket(sock, packet_to_send):
     sock.sendall(packet_bytes)
 
     print(f'ULTRA96_CLIENT: Packet sent to Ultra96: {packet_tuple}\n')
-    # print(f'ULTRA96_CLIENT: Bytes sent to Ultra96 : {packet_bytes}\n')
 
 
 def printPacket(packet_to_send):

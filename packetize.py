@@ -37,9 +37,6 @@ def serialize(details):
     fmt = 'c18sc'
     packet = struct.pack(fmt, details, bytes(18), bytes(1))
 
-    # debugging purposes only
-    # print("Sending: ", interpretDetails(details[0]))
-
     packet_arr = bytearray(packet)
     packet_arr[CHECKSUM_POS] = getChecksum(packet[:CHECKSUM_POS])
 
@@ -92,11 +89,9 @@ def interpretDetails(details):
 def isInvalidPacket(data):
     packet_type = data[0] >> PACKET_TYPE_SHIFT
     if isInvalidPacketType(packet_type):
-        # print("Invalid packet type")
         return True
 
     if getChecksum(data) != 0:
-        # print("Invalid checksum")
         return True
 
     return False
