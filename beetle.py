@@ -61,14 +61,6 @@ class Beetle:
         self.can_enqueue_data = False
         self.packet_attr = None
 
-        # for collection of AI data
-        # if self.device_id == IMU:
-        #     self.csv_file = open('imu.csv', 'w', encoding='UTF8', newline='')
-        #     self.csv_writer = csv.writer(self.csv_file)
-        #     self.headers = ['accX', 'accY', 'accZ', 'gyroX', 'gyroY', 'gyroZ']
-        #     self.csv_writer.writerow(self.headers)
-        #     self.num_rows = 0
-
     def setDelegate(self, delegate):
         self.delegate = delegate
 
@@ -102,7 +94,6 @@ class Beetle:
         
         # if all beetles for the player have been connected/reconnected, enqueue a connected packet
         if self.allPlayerBeetlesConnected():
-            # connected_tuple = (TPacketType.PACKET_TYPE_CONNECTED.value, 0, self.player_id, self.device_id, 0, 0, 0, 0, 0, 0.0, 0.0, 0.0, b'\x00')
             connected_tuple = (TPacketType.PACKET_TYPE_CONNECTED.value, 0, self.player_id, self.device_id, 0, 0, 0, 0, 0, 0.0, 0.0, 0.0, b'\x00')
             print("Enqueue connected packet: ", connected_tuple)
             self.queue.put(connected_tuple)
@@ -122,7 +113,6 @@ class Beetle:
     def disconnect(self):
         self.resetAttributes()
 
-        # disconnect_tuple = (TPacketType.PACKET_TYPE_DISCONNECTED.value, 0, self.player_id, self.device_id, 0, 0, 0, 0, 0, 0.0, 0.0, 0.0, b'\x00')
         disconnect_tuple = (TPacketType.PACKET_TYPE_DISCONNECTED.value, 0, self.player_id, self.device_id, 0, 0, 0, 0, 0, 0.0, 0.0, 0.0, b'\x00')
         print("Enqueued disconnect packet: ", disconnect_tuple)
         self.queue.put(disconnect_tuple)
@@ -179,9 +169,6 @@ class Beetle:
             return
 
         packet_attr = packetize.deserialize(data)
-
-        # if self.player_id == 1 and self.device_id == 1:
-        #     print(f'Packet attributes: {packet_attr} - {mac_dict[self.mac_address]}')
             
         packet_type = packet_attr[0]
 
@@ -206,21 +193,7 @@ class Beetle:
 
         self.enqueueData()
 
-        # write data to csv file for AI component
-        # if self.device_id == IMU and self.num_rows <= 200:
-        #    processed_gyro_data = tuple(map(lambda x: x / 131, list(packet_attr[6:9])))
-        #    row = [*packet_attr[9:12], *processed_gyro_data]
-        #    self.csv_writer.writerow(row)
-        #    self.num_rows += 1
-
     def enqueueData(self):
-        # print(f"Current queue size: {self.queue.qsize()}")
-
-        # Don't enqueue unless all beetles are connected
-        if not self.can_enqueue_data:
-            # print(f"Cannot enqueue because not all Beetles are connected - {mac_dict[self.mac_address]}")
-            return
-
         # Don't enqueue if no shot was sent
         if self.device_id == EMITTER and not self.packet_attr[4]:
             return
