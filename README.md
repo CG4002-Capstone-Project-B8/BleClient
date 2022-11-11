@@ -4,7 +4,7 @@ This is the Internal Comms component which communicates with the Beetles via BLE
 # Setup 
 
 ## Beetles BLE Setup
-After uploading the corresponding Arduino code to each Beetle as specified in the README in the `TheBeetles` folder, we need to configure BLE on the Beetles via what is known as AT commands. The AT commands allow for the configuration of Beetles to be a _Peripheral_ in the BLE specification, as well as obtaining the Beetles' MAC addresses. The following steps detail the steps to correctly set up BLE on the Beetles.
+After uploading the corresponding Arduino code to each Beetle as specified in the README in the `TheBeetles` folder, we need to configure BLE on the Beetles via what is known as AT commands. The AT commands allow for the configuration of Beetles to be a _Peripheral_ in the BLE specification, as well as obtaining the Beetles' MAC addresses. The following steps detail the setup of BLE on the Beetles.
 1. Open a `.ino` file on Arduino IDE.
 2. Connect the Beetle to the laptop. Click on <button>Tools</button>. Under _Port_, select the USB port connected to the Beetle (Arduino Uno).
 3. Open the _Serial Monitor_ by clicking on the button at the top right of the IDE.
