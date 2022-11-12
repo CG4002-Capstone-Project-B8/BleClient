@@ -27,7 +27,7 @@ After uploading the corresponding Arduino code to each Beetle as specified in th
 >In Step 10, the `AT+MAC=?` queries the MAC address of the Beetle. Once the MAC address of each Beetle is obtained, open `globals.py` and edit the `BEETLE_ADDRESSES`  variable accordingly. Refer to the `mac_dict` variable to correctly match the Beetles to their respective MAC addresses.
 
 ## Bluetooth Setup on Laptop
-1. Clone this repository to your relay laptop running on a Linux operating system. Note that the `bluepy` Python package used for BLE communication is only compatible with Linux.
+1. Make a copy of this folder on your relay laptop running on a Linux operating system. Note that the `bluepy` Python package used for BLE communication is only compatible with Linux.
 
 2. Ensure Python (version 3.0 or higher) is installed on the laptop. 
     ```
